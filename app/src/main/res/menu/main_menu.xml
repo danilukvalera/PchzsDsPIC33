@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/handDecoder"
+        android:title="Ручной декодер" />
+    <item
+        android:id="@+id/disconnect"
+        android:title="Отключить" />
+    <item
+        android:id="@+id/saveEEPROM"
+        android:title="Сохранить EEPROM в файл" />
+    <item
+        android:id="@+id/readEEPROM"
+        android:title="Читать EEPROM из файла" />
+    <item
+        android:id="@+id/displayEEpromMaster"
+        android:title="Показать HEX master" />
+    <item
+        android:id="@+id/displayEEpromSlave"
+        android:title="Показать HEX slave" />
+    <item
+        android:id="@+id/removeProtectState"
+        android:title="Снять защитное состояние" />
+</menu>

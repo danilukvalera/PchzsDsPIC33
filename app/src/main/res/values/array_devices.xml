@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="device_array">
+        <item> . . . </item>
+        <item>ГАРС-С</item>
+        <item>ГП-Е</item>
+        <item>ГКЛС-Е</item>
+        <item>ГАРС-Е</item>
+        <item>ОКД</item>
+    </string-array>
+
+</resources>
