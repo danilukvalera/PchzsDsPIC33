@@ -9,20 +9,16 @@
 
     <TextView
         android:id="@+id/tvAdressColumn"
-        android:layout_width="0dp"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
         android:background="@color/colorLightGray"
         android:fontFamily="monospace"
-        android:paddingStart="10dp"
-        android:paddingLeft="5dp"
-        android:paddingEnd="10dp"
+        tools:text="DDD0000 0002 0004 0006 0008 000A 000C 000E"
         android:textColor="@android:color/black"
         android:textSize="18sp"
-        app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toEndOf="@+id/textView2"
-        app:layout_constraintTop_toTopOf="parent"
-        tools:text="   0000 0002 0004 0006 0008 000A 000C 000E" />
+        app:layout_constraintTop_toTopOf="parent" />
 
     <TextView
         android:id="@+id/textView2"
@@ -54,24 +50,23 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:background="@color/colorLightGray"
+                tools:text="0000\n0002"
                 android:textColor="@android:color/black"
                 android:textSize="18sp"
                 app:fontFamily="monospace"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toTopOf="parent"
-                tools:text="0000\n0002" />
+                app:layout_constraintTop_toTopOf="parent" />
 
             <TextView
                 android:id="@+id/tvEEPROMhex"
-                android:layout_width="0dp"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:paddingRight="10dp"
+                tools:text="DDD0000 0002 0004 0006 0008 000A 000C 000E\nDDD0000 0002 0004 0006 0008 000A 000C 000E"
                 android:textColor="@color/colorLightGray"
                 android:textSize="18sp"
                 app:fontFamily="monospace"
                 app:layout_constraintStart_toEndOf="@+id/tvAdress"
-                app:layout_constraintTop_toTopOf="parent"
-                tools:text="1111111111111\nAAAAAAAAAAAAA" />
+                app:layout_constraintTop_toTopOf="parent" />
         </androidx.constraintlayout.widget.ConstraintLayout>
     </ScrollView>
 </androidx.constraintlayout.widget.ConstraintLayout>

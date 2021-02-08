@@ -3,8 +3,8 @@
     <string name="NO_CONNECTION">Нет подключения.\nНажмите для соединения</string>
     <string name="CONNECTION_IN_PROGRESS">Выполняется подключение</string>
     <string name="READ_CODE_IN_PROGRESS">Выполняется чтение кода ЗС</string>
-    <string name="REMOVE_PROTECT_STATE_IN_PROGRESS">Выполняется снятие ЗС</string>
-    <string name="READ_CODE">Считать код ЗС</string>
+    <string name="REMOVE_PROTECT_CODE_IN_PROGRESS">Выполняется снятие ЗС</string>
+    <string name="READY_READ_CODE">Считать код ЗС</string>
     <string name="DISCONNECTION_IN_PROGRESS">Выполняется отключение устройства</string>
     <string name="RECONNECTING">Повторное подключение</string>
     <string name="ERROR_FILE_DECODER">Ошибка в файле декодера</string>
@@ -13,10 +13,16 @@
     <string name="REFERENCE_NULL_POINTER">Ссылка на нулевой указатель\n\n</string>
     <string name="FAILURE_TYPE_NOT_FOUND">Тип отказа не найден</string>
     <string name="FAILURE_CODE_NOT_FOUND">Код отказа не найден</string>
-    <string name="DEVICE_TYPE_NOT_DEFINED">тип прибора не определен</string>
+    <string name="DEVICE_TYPE_NOT_DEFINED">Прибор не определен</string>
     <string name="NO_BLUETOOTH">Bluetooth на устройстве отсутствует</string>
     <string name="ERROR_INIT_BLUETOOTH">Ошибка инициализации Bluetooth. Возможно он отсутствует на устройстве</string>
     <string name="PCHZS_NOT_FOUND">Устройство ПЧЗС не обнаружено. Проверьте питание ПЧЗС и повторите попытку</string>
     <string name="ERROR_CONNECT">Ошибка подключения. Проверьте питание ПЧЗС и повторите попытку</string>
     <string name="ADRESS_PCHZS">com.daniluk.pchzs.adress_pchzs</string>
+    <string name="WAITING_TIME_MORE_5S">Превышено время ожидания данных (T > 5 c)</string>
+    <string name="ERROR_READING_DATA_FROM_STREAM">Ошибка чтения данных</string>
+    <string name="METHOD_THREW_EXCEPTION">метод выбросил исключение</string>
+    <string name="ERROR_TRANSMISSION_OR_READING_DATA">Ошибка передачи или чтения данных</string>
+    <string name="ERROR_READING_PROTECT_STATE">Ошибка чтения защитного состояния</string>
+    <string name="ERROR_REMOVE_PROTECT_STATE">Ошибка снятия защитного состояния</string>
 </resources>

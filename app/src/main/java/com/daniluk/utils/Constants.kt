@@ -1,42 +1,46 @@
 package com.daniluk.utils
 
 import com.daniluk.R
-object constants {
-    val colorRED: Int = R.color.colorLightRed
-    val colorGREEN: Int = R.color.colorLightGreen
-    val colorBLUE: Int = R.color.colorLightBlue
-    val colorGray: Int = R.color.colorGray
+object Constants {
+    const val colorRED: Int = R.color.colorLightRed
+    const val colorGREEN: Int = R.color.colorLightGreen
+    const val colorBLUE: Int = R.color.colorLightBlue
+    const val colorGray: Int = R.color.colorGray
 
     //количество попыток автоматического переподключения
     const val NUMBER_ATTEMPTS_AUTO_CONNECT = 5
 
     //Состояние ПЧЗС
-    const val STATE_ERROR_BLUETOOTH_INIT        = 0
-    const val STATE_NO_CONNECT                  = 1
-    const val STATE_READ_CODE                   = 2
-    const val STATE_CONNECTION_IN_PROGRESS      = 3
-    const val STATE_DISCONNECTION_IN_PROGRESS   = 4
+    const val STATE_ERROR_BLUETOOTH_INIT                = 0
+    const val STATE_NO_CONNECT                          = 1
+    const val STATE_READY_READ_CODE                     = 2
+    const val STATE_CONNECTION_IN_PROGRESS              = 3
+    const val STATE_DISCONNECTION_IN_PROGRESS           = 4
+    const val STATE_READ_CODE_IN_PROGRESS               = 5
+    const val STATE_REMOVE_PROTECT_CODE_IN_PROGRESS     = 6
 
     //Команды управления Bluetooth
     const val COMMAND_BT_DO_NOTHING             = 0
-    const val COMMAND_BT_ON  = 1
+    const val COMMAND_BT_ON                     = 1
     const val COMMAND_SEARCH_PERMISSION_REQUEST = 2
+    const val COMMAND_WRITE_PERMISSION_REQUEST  = 3
 
     //запросы к модулю сопряжения
     const val BLUETOOTH_DEVICE_NAME = "PCHZS-DSPIC33"
     const val REMOV_PROTECT_STATE = "%REMOV_PROTECT_STATE%"
 
-    //public static final String READ_PROTECT_STATE = "%READ_PROTECT_STATE%";
-    const val READ_PROTECT_STATE = "%READ_PROTECT_STATE_GARS%"
-//public static final String READ_PROTECT_STATE = "%READ_PROTECT_STATE_GKLS%";
-//public static final String READ_PROTECT_STATE = "%READ_PROTECT_STATE_ERROR%";
+    const val READ_PROTECT_STATE = "%READ_PROTECT_STATE%";
+    //const val READ_PROTECT_STATE = "%READ_PROTECT_STATE_GARS%"
+    //const val READ_PROTECT_STATE = "%READ_PROTECT_STATE_GKLS%";
+    //const val READ_PROTECT_STATE = "%READ_PROTECT_STATE_ERROR%";
 
-    //public static final String READ_PROTECT_STATE = "%READ_PROTECT_STATE_GKLS%";
-//public static final String READ_PROTECT_STATE = "%READ_PROTECT_STATE_ERROR%";
     const val MASTER = 1
     const val SLAVE = 0
     const val MASTER_STR = "Master"
     const val SLAVE_STR = "Slave"
+
+    const val FLAG_DECODE_CODE = 1
+    const val FLAG_DECODE_NON_ERASABLE_CODE = 2
 
     const val TAG_CAN_NEW = 1
     const val TAG_CAN_OLD = 2
@@ -49,60 +53,61 @@ object constants {
 
 
     //ответы модуля сопряжения
-    var READ_ZS_END = "READ_ZS_END" //признак окончания процедуры чтения ЗС
+    const val READ_ZS_END = "READ_ZS_END" //признак окончания процедуры чтения ЗС
 
-    var CAN_NEW = "_CAN_NEW" //признак данных принятых по новому CAN
+    const val CAN_NEW = "_CAN_NEW" //признак данных принятых по новому CAN
 
-    var CAN_OLD = "_CAN_OLD" //признак данных принятых по старому CAN
+    const val CAN_OLD = "_CAN_OLD" //признак данных принятых по старому CAN
+    //const val CAN_OLD_MASTER = "_CAN_OLD_MASTER" //признак данных принятых по старому CAN от MASTER (этот признак записывается в список данных)
+    //const val CAN_OLD_SLAVE = "_CAN_OLD_SLAVE" //признак данных принятых по старому CAN от SLAVE (этот признак записывается в список данных)
 
-    var PP3S = "_PP3S" //признак данных принятых от приемника ТРЦ
+    const val PP3S = "_PP3S" //признак данных принятых от приемника ТРЦ
 
-    var GP3S = "_GP3S" //признак данных принятых от генератора ТРЦ
+    const val GP3S = "_GP3S" //признак данных принятых от генератора ТРЦ
 
-    //public static String ERROR_POWER_DEVICE = "_ERROR_POWER_DEVICE_";           //признак отсутствия питания ОК
-    var RESET_PROTECT_STATE_END = "RESET_PROTECT_STATE_END" //признак окончания процедуры снятия ЗС
+    const val ERROR_POWER_DEVICE = "_ERROR_POWER_DEVICE_";           //признак отсутствия питания ОК
+    const val RESET_PROTECT_STATE_END = "RESET_PROTECT_STATE_END" //признак окончания процедуры снятия ЗС
 
-//public static String RESET_PROTECT_STATE_OK = "_RESET_PROTECT_STATE_OK";    //признак успешного выполнения снятия ЗС
+    const val RESET_PROTECT_STATE_OK = "_RESET_PROTECT_STATE_OK";    //признак успешного выполнения снятия ЗС
 
-    //public static String RESET_PROTECT_STATE_OK = "_RESET_PROTECT_STATE_OK";    //признак успешного выполнения снятия ЗС
-//*************************Для CAN_NEW**********************************************************
-    var ID_MASTER_NEW_CAN = "02A0" //Адрес master для CAN_NEW
+ //*************************Для CAN_NEW**********************************************************
+    const val ID_MASTER_NEW_CAN = "02A0" //Адрес master для CAN_NEW
 
-    var ID_SLAVE_NEW_CAN = "02A1" //Адрес slave для CAN_NEW
+    const val ID_SLAVE_NEW_CAN = "02A1" //Адрес slave для CAN_NEW
 
 
-    var deviceNameStartAdress = 0x02
-    var deviceNameEndAdress = 0x0E
-    var pocessorIdStartAdress = 0x0E
-    var pocessorIdEndAdress = 0x10
-    var programVersionStartAdress = 0x10
-    var programVersionEndAdress = 0x20
+    const val deviceNameStartAdress = 0x02
+    const val deviceNameEndAdress = 0x0E
+    const val pocessorIdStartAdress = 0x0E
+    const val pocessorIdEndAdress = 0x10
+    const val programVersionStartAdress = 0x10
+    const val programVersionEndAdress = 0x20
 
     //public static int programDateReleaseStartAdress = 0x20;
-    var programDateReleaseStartAdress = 0x25
-    var programDateReleaseEndAdress = 0x30
-    var defectFileNameStartAdress = 0x50
-    var defectFileNameEndAdress = 0x6E
-    var defectStringNumberAdress = 0x6E
+    const val programDateReleaseStartAdress = 0x25
+    const val programDateReleaseEndAdress = 0x30
+    const val defectFileNameStartAdress = 0x50
+    const val defectFileNameEndAdress = 0x6E
+    const val defectStringNumberAdress = 0x6E
 
-    var adressCodProtectState1 = 0x0030
-    var adressCodProtectState2 = 0x0030 //0x0FF0;   таких адресов в памяти нет!!!
+    const val adressCodProtectState1 = 0x0030
+    const val adressCodProtectState2 = 0x0030 //0x0FF0;   таких адресов в памяти нет!!!
 
-    var adressCodProtectState3 = 0x0030 //0x0FF2;   таких адресов в памяти нет!!!
+    const val adressCodProtectState3 = 0x0030 //0x0FF2;   таких адресов в памяти нет!!!
 
-    var adressCodProtectState4 = 0x0032
+    const val adressCodProtectState4 = 0x0032
 
     const val NO_PROTECT_STATE = "A55A"
     const val TYPE_DEFECT = "тип отказа"
     const val END_BLOCK = "конец "
 
     //*************************Для CAN_OLD**********************************************************
-    var FILE_NAME_MAP_DEVICE_CAN_OLD = "mapDevice.txt" //Адрес master для CAN_OLD
+    const val FILE_NAME_MAP_DEVICE_CAN_OLD = "mapDevice.txt" //Адрес master для CAN_OLD
 
 
-    var ID_MASTER_OLD_CAN = "001C" //Адрес master для CAN_OLD
+    const val ID_MASTER_OLD_CAN = "001C" //Адрес master для CAN_OLD
 
-    var ID_SLAVE_OLD_CAN = "041C" //Адрес slave для CAN_OLD
+    const val ID_SLAVE_OLD_CAN = "041C" //Адрес slave для CAN_OLD
 
 
     const val NO_PROTECT_STATE_OLD_CAN = "A55A" //код отсутствия отказа

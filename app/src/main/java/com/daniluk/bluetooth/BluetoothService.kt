@@ -16,21 +16,26 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewModelScope
 import com.daniluk.MainViewModel
 import com.daniluk.R
-import com.daniluk.utils.constants.BLUETOOTH_DEVICE_NAME
-import com.daniluk.utils.constants.COMMAND_BT_ON
-import com.daniluk.utils.constants.COMMAND_SEARCH_PERMISSION_REQUEST
-import com.daniluk.utils.constants.STATE_CONNECTION_IN_PROGRESS
-import com.daniluk.utils.constants.STATE_DISCONNECTION_IN_PROGRESS
-import com.daniluk.utils.constants.STATE_ERROR_BLUETOOTH_INIT
-import com.daniluk.utils.constants.STATE_NO_CONNECT
-import com.daniluk.utils.constants.STATE_READ_CODE
+import com.daniluk.utils.Constants
+import com.daniluk.utils.Constants.BLUETOOTH_DEVICE_NAME
+import com.daniluk.utils.Constants.COMMAND_BT_ON
+import com.daniluk.utils.Constants.COMMAND_SEARCH_PERMISSION_REQUEST
+import com.daniluk.utils.Constants.READ_PROTECT_STATE
+import com.daniluk.utils.Constants.READ_ZS_END
+import com.daniluk.utils.Constants.REMOV_PROTECT_STATE
+import com.daniluk.utils.Constants.RESET_PROTECT_STATE_END
+import com.daniluk.utils.Constants.STATE_CONNECTION_IN_PROGRESS
+import com.daniluk.utils.Constants.STATE_DISCONNECTION_IN_PROGRESS
+import com.daniluk.utils.Constants.STATE_NO_CONNECT
+import com.daniluk.utils.Constants.STATE_READY_READ_CODE
 import kotlinx.coroutines.*
+import java.io.BufferedInputStream
 import java.io.IOException
 import java.lang.reflect.Method
 import java.nio.charset.StandardCharsets
 import java.util.*
 
-class BluetoothService(val context: Context) {
+class BluetoothService(private val context: Context) {
     companion object {
         const val REQUEST_CODE_BLUETOOTH_TUNE_ON = 101
         const val PERMISSION_REQUEST_CODE_ACCESS_COARSE_LOCATION = 201
@@ -38,7 +43,7 @@ class BluetoothService(val context: Context) {
     }
 
     var logConnect = ""
-    var flagWriteLogConnect = true
+    private var flagWriteLogConnect = false
     fun showBtLog(textLog: String) {
         Log.d(
             TAG_BT_CONNECT,
@@ -69,18 +74,77 @@ class BluetoothService(val context: Context) {
         bluetoothInitialization()
     }
 
-    //Чтение защитного состояния
-    fun readProtectState() {
-        //проверить а есть ли соединение....
+    //Передача и прием данных по Bluetooth
+    suspend fun dataTransmissionAndReceive(command: String){
+        withContext(Dispatchers.IO) {
+            val bufferSize = 10000
+            val buffer = ByteArray(bufferSize)
+            var bytesRead: Int
+
+            showBtLog("dataTransmissionAndReceive():  вход в коррутину чтения ЗС")
+            val inputStream = clientSocket?.inputStream
+            val outputStream = clientSocket?.outputStream
+            try {
+                //Передать команду
+                showBtLog("dataTransmissionAndReceive():  передать команду чтения ЗС")
+                val byteString = command.toByteArray()
+                outputStream?.write(byteString)
+
+                //*****чтение данных из модуля сопряжения*****
+                val bufferedInputStream = BufferedInputStream(inputStream)
+                var i = 0
+                showBtLog("dataTransmissionAndReceive():  ожидаем начала приема данных из ПЧЗС")
+                //ожидание начала передачи
+                while (bufferedInputStream.available() < 1) {
+                    //счетчик на 5 с, max время ожидания приема данных
+                    delay(100)
+                    i++
+                    showBtLog("ждем...")
+                    if (i > 50) {
+                        viewModel.textTvCodeMaster.postValue(context.getString(R.string.WAITING_TIME_MORE_5S))
+                        viewModel.statePCHZS.postValue(STATE_READY_READ_CODE)
+                        showBtLog("dataTransmissionAndReceive():  Превышено время ожидания данных (T > 5 c)")
+                        return@withContext
+                    }
+                }
+                //цикл приема данных
+                val builder = StringBuilder()
+                while (bufferedInputStream.available() > 0) {
+                    bytesRead = bufferedInputStream.read(buffer)
+                    if (bytesRead == -1) {
+                        viewModel.textTvCodeMaster.postValue(context.getString(R.string.ERROR_READING_DATA_FROM_STREAM))
+                        viewModel.statePCHZS.postValue(STATE_READY_READ_CODE)
+                        showBtLog("dataTransmissionAndReceive():  Ошибка чтения данных из потока")
+                        return@withContext
+                    }
+                    builder.append(String(buffer, 0, bytesRead))
+
+                    //анализ принятых данных на флаг окончания передачи
+                    val flag = builder.toString().indexOf(Constants.READ_ZS_END)
+                    if (flag > 0) {
+                        showBtLog("dataTransmissionAndReceive():  Принят флаг окончания передачи")
+                        break
+                    }
+                        //delay(500)
+                    delay(1500)
+                }
+                viewModel.responsePchzs = builder.toString()
+
+            } catch (e: Exception) {
+                viewModel.textTvCodeMaster.postValue(context.getString(R.string.ERROR_TRANSMISSION_OR_READING_DATA))
+                viewModel.statePCHZS.postValue(STATE_READY_READ_CODE)
+                showBtLog("dataTransmissionAndReceive():  метод выбросил исключение: ${e.message}")
+            }
+        }
     }
 
     //Инициализация Bluetooth
-    fun bluetoothInitialization(): Boolean {
+    private fun bluetoothInitialization(): Boolean {
         //если bluetoothAdapter = null - выход
         if (bluetoothAdapter == null) {
             viewModel.textTvCodeMaster.value = context.getString(R.string.NO_BLUETOOTH)
             viewModel.textTvCodeSlave.value = context.getString(R.string.NO_BLUETOOTH)
-            viewModel.statePCHZS.value = STATE_ERROR_BLUETOOTH_INIT
+            //viewModel.statePCHZS.value = STATE_ERROR_BLUETOOTH_INIT       //ddd
             return false
         }
 
@@ -115,7 +179,8 @@ class BluetoothService(val context: Context) {
             showBtLog("connectDevice(): Вход в suspend подключения")
             try {
                 //clientSocket = bluetoothPCHZS?.createRfcommSocketToServiceRecord(uuid) //создать сокет для соединения
-                clientSocket = bluetoothPCHZS?.createInsecureRfcommSocketToServiceRecord(uuid) //создать сокет для соединения без требования сопряжения
+                clientSocket =
+                    bluetoothPCHZS?.createInsecureRfcommSocketToServiceRecord(uuid) //создать сокет для соединения без требования сопряжения
                 showBtLog("connectDevice():  создали Socket")
                 bluetoothAdapter?.cancelDiscovery()
                 showBtLog("connectDevice():  выключили поиск и ждем отключения поиска")
@@ -123,15 +188,19 @@ class BluetoothService(val context: Context) {
                     showBtLog("ждем...")
                 }
                 showBtLog("connectDevice():  старт подключения.")
-                while (Date().time - timeDisconnect < 3000){
+                while (Date().time - timeDisconnect < 3000) {
                     //ожидается время гарантированного отключения удаленного устройства (имеенно чтобы ПЧЗС успел отключиться)
-                    showBtLog("connectDevice():  ожидаем время перед повторным подключением")
+                    showBtLog(
+                        "connectDevice():  ожидаем время перед повторным подключением. " +
+                                "Ожидание ${(Date().time - timeDisconnect) / 1000} c"
+                    )
+                    delay(500)
                 }
 
                 clientSocket?.connect()
                 //Если подключение не успешо метод clientSocket.connect() выбросит исключение
                 //При этом сработает BluetoothBroadcastReceiver:  ACTION_ACL_DISCONNECTED
-                viewModel.statePCHZS.postValue(STATE_READ_CODE)
+                viewModel.statePCHZS.postValue(STATE_READY_READ_CODE)
                 showBtLog("connectDevice():  после подключения. Установили готовность к чтению ЗС")
                 viewModel.adressPchzs = bluetoothPCHZS?.address ?: ""
                 showBtLog("connectDevice():  после подключения. сохранили адрес ПЧЗС")
@@ -149,7 +218,10 @@ class BluetoothService(val context: Context) {
             showBtLog("searchPchzs(): Вход в suspend поиска")
             //статус разрешение на запуск поискс Bluetooth
             var permissionStatus =
-                ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION)
+                ContextCompat.checkSelfPermission(
+                    context,
+                    Manifest.permission.ACCESS_COARSE_LOCATION
+                )
             showBtLog("searchPchzs(): проверка разрешения permissionStatus = $permissionStatus")
             //если разрешение есть, старт поиска устройств
             //если разрешения нет, запрос на получение разрешения
@@ -160,7 +232,10 @@ class BluetoothService(val context: Context) {
                 //ожидание разрешения поиска
                 while (permissionStatus != PackageManager.PERMISSION_GRANTED) {
                     permissionStatus =
-                        ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION)
+                        ContextCompat.checkSelfPermission(
+                            context,
+                            Manifest.permission.ACCESS_COARSE_LOCATION
+                        )
                     showBtLog("searchPchzs(): Ждем разрешения...")
                     delay(1000)
                 }
@@ -190,7 +265,7 @@ class BluetoothService(val context: Context) {
     fun connectPCHZS() {
         viewModel.statePCHZS.value = STATE_CONNECTION_IN_PROGRESS
         showBtLog("connectPCHZS():  Вход в функцию connectPCHZS():  запустил прогрессбар. Проверка что старый сокет закрыт и если нужно ожидание закрытия")
-        while (clientSocket?.isConnected() == true) {
+        while (clientSocket?.isConnected == true) {
             showBtLog("Ждем...")
         }
         //коррутина подключения
@@ -258,9 +333,9 @@ class BluetoothService(val context: Context) {
 
     //Получение bluetoothPCHZS из списка сопряженных устройств
     //private fun getDeviceFromBondedDevices(): BluetoothDevice? {
-    public fun getDeviceFromBondedDevices(): BluetoothDevice? {
-        var listBondedDevices = bluetoothAdapter?.bondedDevices ?: setOf()
-        listBondedDevices?.forEach { device ->
+    private fun getDeviceFromBondedDevices(): BluetoothDevice? {
+        val listBondedDevices = bluetoothAdapter?.bondedDevices ?: setOf()
+        listBondedDevices.forEach { device ->
             device.name.let {
                 if (it == BLUETOOTH_DEVICE_NAME)
                     return device
@@ -295,13 +370,20 @@ class BluetoothService(val context: Context) {
         }
         //приемник для отслеживания запроса сопряжения
         bluetoothPairingBroadcastReceiver = BluetoothPairingBroadcastReceiver()
-        context.registerReceiver(bluetoothPairingBroadcastReceiver, filterBluetoothPairingBroadcastReceiver)
+        context.registerReceiver(
+            bluetoothPairingBroadcastReceiver,
+            filterBluetoothPairingBroadcastReceiver
+        )
     }
 
     //отмена регистрации широковещательного приемника
     fun unregisterBluetoothBroadcastReceiver() {
-        context.unregisterReceiver(bluetoothBroadcastReceiver)
-        context.unregisterReceiver(bluetoothPairingBroadcastReceiver)
+        if (bluetoothBroadcastReceiver != null) {
+            context.unregisterReceiver(bluetoothBroadcastReceiver)
+        }
+        if (bluetoothPairingBroadcastReceiver != null) {
+            context.unregisterReceiver(bluetoothPairingBroadcastReceiver)
+        }
     }
 
     //широковещательный приемник для отслеживания состояния BluetoothAdapter
@@ -343,10 +425,10 @@ class BluetoothService(val context: Context) {
                 //ACTION отслеживание состояния блютуз адаптера - вкл, выкл.
                 BluetoothAdapter.ACTION_STATE_CHANGED == action -> {
                     showBtLog("BluetoothBroadcastReceiver:  ACTION_STATE_CHANGED")
-                    val state = intent.getIntExtra(BluetoothAdapter.EXTRA_STATE, -1)
-                    when (state) {
+                    when (intent.getIntExtra(BluetoothAdapter.EXTRA_STATE, -1)) {
                         BluetoothAdapter.STATE_TURNING_ON -> {
-                            viewModel.stateBluetoothAdapter.value = BluetoothAdapter.STATE_TURNING_ON
+                            viewModel.stateBluetoothAdapter.value =
+                                BluetoothAdapter.STATE_TURNING_ON
                             showBtLog("BluetoothAdapter.STATE_TURNING_ON")
                         }
                         BluetoothAdapter.STATE_ON -> {
@@ -354,7 +436,8 @@ class BluetoothService(val context: Context) {
                             showBtLog("BluetoothAdapter.STATE_ON")
                         }
                         BluetoothAdapter.STATE_TURNING_OFF -> {
-                            viewModel.stateBluetoothAdapter.value = BluetoothAdapter.STATE_TURNING_OFF
+                            viewModel.stateBluetoothAdapter.value =
+                                BluetoothAdapter.STATE_TURNING_OFF
                             showBtLog("BluetoothAdapter.STATE_TURNING_OFF")
                         }
                         BluetoothAdapter.STATE_OFF -> {
@@ -369,20 +452,22 @@ class BluetoothService(val context: Context) {
                 //ACTION отслеживание момента подключения удаленного устройства
                 BluetoothDevice.ACTION_ACL_CONNECTED == action -> {
                     showBtLog("BluetoothBroadcastReceiver:  ACTION_ACL_CONNECTED")
-                    val device = (intent.getParcelableExtra<BluetoothDevice>(BluetoothDevice.EXTRA_DEVICE))!!
+                    val device =
+                        (intent.getParcelableExtra<BluetoothDevice>(BluetoothDevice.EXTRA_DEVICE))!!
                     showBtLog("Момент подключения к устройству ${device.name}")
                 }
 
                 //ACTION отслеживание момента отключения удаленного устройства
                 BluetoothDevice.ACTION_ACL_DISCONNECTED == action -> {
                     showBtLog("BluetoothBroadcastReceiver:  ACTION_ACL_DISCONNECTED")
-                    val device = (intent.getParcelableExtra<BluetoothDevice>(BluetoothDevice.EXTRA_DEVICE))!!
+                    val device =
+                        (intent.getParcelableExtra<BluetoothDevice>(BluetoothDevice.EXTRA_DEVICE))!!
                     showBtLog("device = ${device.name}")
                     if (device.name == BLUETOOTH_DEVICE_NAME) {
                         timeDisconnect = Date().time
-                        showBtLog("установить STATE_NO_CONNECT")
+                        showBtLog("установить STATE_NO_CONNECT, время отключения = $timeDisconnect")
                         viewModel.statePCHZS.value = STATE_NO_CONNECT
-                        if(viewModel.flagActionDisconnect){
+                        if (viewModel.flagActionDisconnect) {
                             viewModel.flagActionDisconnect = false
                         }
                     }
@@ -399,7 +484,10 @@ class BluetoothService(val context: Context) {
                 // или при попытке подкоючения и отсутствии сопряжения
                 BluetoothDevice.ACTION_BOND_STATE_CHANGED == action -> {
                     showBtLog("BluetoothBroadcastReceiver: ACTION_BOND_STATE_CHANGED")
-                    val bondState = intent.getIntExtra(BluetoothDevice.EXTRA_BOND_STATE, BluetoothDevice.ERROR)
+                    val bondState = intent.getIntExtra(
+                        BluetoothDevice.EXTRA_BOND_STATE,
+                        BluetoothDevice.ERROR
+                    )
                     showBtLog("Состояние сопряжения с подключаемым устройством bondState = $bondState")
                 }
 
@@ -425,7 +513,8 @@ class BluetoothService(val context: Context) {
             if (intent?.action == BluetoothDevice.ACTION_PAIRING_REQUEST) {
                 showBtLog("BluetoothPairingBroadcastReceiver:  ACTION_PAIRING_REQUEST")
                 try {
-                    val device = intent.getParcelableExtra<BluetoothDevice>(BluetoothDevice.EXTRA_DEVICE)
+                    val device =
+                        intent.getParcelableExtra<BluetoothDevice>(BluetoothDevice.EXTRA_DEVICE)
                     val pin = intent.getIntExtra("android.bluetooth.device.extra.PAIRING_KEY", 1234)
                     val pinBytes: ByteArray
                     pinBytes = ("" + pin).toByteArray(StandardCharsets.UTF_8)
@@ -479,16 +568,22 @@ class BluetoothService(val context: Context) {
                 val forName = reflexClass.getMethod("forName", String::class.java)
                 showBtLog("unpairDevice():  forName = $forName")
                 val getMethod =
-                    Class::class.java.getMethod("getMethod", String::class.java, arrayOf<Class<*>>()::class.java)
+                    Class::class.java.getMethod(
+                        "getMethod",
+                        String::class.java,
+                        arrayOf<Class<*>>()::class.java
+                    )
                 showBtLog("unpairDevice():  getMethod = $getMethod")
-                val someHiddenClass2 = forName.invoke(null, "android.bluetooth.BluetoothDevice") as Class<*>
+                val someHiddenClass2 =
+                    forName.invoke(null, "android.bluetooth.BluetoothDevice") as Class<*>
                 showBtLog("unpairDevice():  getMethod = $getMethod")
-                val someHiddenMethod2 = getMethod.invoke(someHiddenClass2, "removeBond", null) as Method
+                val someHiddenMethod2 =
+                    getMethod.invoke(someHiddenClass2, "removeBond", null) as Method
                 showBtLog("unpairDevice():  someHiddenMethod2 = $someHiddenMethod2")
 
                 val result2 = someHiddenMethod2.invoke(device)
                 showBtLog("unpairDevice():  result2 = $result2")
-                viewModel.textTvCodeMaster.value = result2.toString()
+                viewModel.textTvCodeMaster.value = result2?.toString() ?: ""
             } catch (e: Exception) {
                 viewModel.bluetoothService.showBtLog("teunpairDevicest(): e = ${e.message}")
             }

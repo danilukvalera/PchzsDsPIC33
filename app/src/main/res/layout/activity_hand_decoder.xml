@@ -4,14 +4,19 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@android:color/black"
+    android:background="@color/colorPrimary"
     tools:context=".screens.HandDecoderActivity">
 
 
     <Spinner
         android:id="@+id/spDevice"
+        style="@android:style/Widget.Spinner.DropDown"
         android:layout_width="0dp"
         android:layout_height="0dp"
+        android:background="@android:drawable/btn_dropdown"
+        android:popupBackground="@android:drawable/btn_dropdown"
+        android:scrollbarStyle="outsideOverlay"
+        android:spinnerMode="dropdown"
         android:textColor="@color/colorLightGreen"
         app:layout_constraintBottom_toBottomOf="@+id/etProtectCode"
         app:layout_constraintEnd_toStartOf="@+id/guideline"
@@ -38,8 +43,8 @@
         android:layout_height="0dp"
         android:padding="8dp"
         android:paddingBottom="20dp"
-        android:textSize="18sp"
         android:textColor="@color/colorLightGray"
+        android:textSize="18sp"
         app:layout_constraintBottom_toTopOf="@+id/etProtectCode"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
