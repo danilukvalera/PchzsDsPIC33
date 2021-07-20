@@ -2,32 +2,34 @@
 <androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
-    android:id="@+id/constraintLayout"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@android:color/black"
-    tools:context=".screens.ExtendedDataActivity">
+    tools:context=".screens.BlackBox">
 
     <TextView
-        android:id="@+id/tvPocessorNameExtended"
+        android:id="@+id/tvLabelDlackBox"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_marginStart="8dp"
         android:layout_marginTop="8dp"
+        android:layout_marginEnd="8dp"
+        android:text='Содержимое\n"Черного ящика"'
+        android:textAlignment="center"
         android:textColor="@color/colorLightGray"
         android:textSize="24sp"
+        app:fontFamily="monospace"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        tools:text="MASTER" />
+        app:layout_constraintTop_toTopOf="parent" />
 
     <ScrollView
         android:layout_width="0dp"
         android:layout_height="0dp"
-        android:layout_marginTop="8dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/tvPocessorNameExtended">
+        app:layout_constraintTop_toBottomOf="@+id/tvIdProcessor">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -35,15 +37,28 @@
             android:orientation="vertical">
 
             <TextView
-                android:id="@+id/tvDataExtended"
+                android:id="@+id/tvBlacBox"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:paddingLeft="10dp"
-                android:paddingRight="10dp"
                 android:textColor="@color/colorLightGray"
                 android:textSize="18sp"
                 app:fontFamily="monospace"
                 tools:text="TextView" />
         </LinearLayout>
     </ScrollView>
+
+    <TextView
+        android:id="@+id/tvIdProcessor"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        tools:text="Master"
+        android:textAlignment="center"
+        android:textColor="@color/colorLightGray"
+        android:textSize="24sp"
+        app:fontFamily="monospace"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.498"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/tvLabelDlackBox" />
+
 </androidx.constraintlayout.widget.ConstraintLayout>

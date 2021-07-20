@@ -1,6 +1,7 @@
 package com.daniluk.screens
 
 import android.annotation.SuppressLint
+import android.content.Intent
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 import com.daniluk.MainViewModel
@@ -30,8 +31,6 @@ class ExtendedDataActivity : AppCompatActivity() {
     private var typeCode = 1
 
 
-
-
     @SuppressLint("SetTextI18n")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -42,22 +41,35 @@ class ExtendedDataActivity : AppCompatActivity() {
 
         val viewModel = MainViewModel.instansViewModel
         val idProcessor = intent.getIntExtra("idProcessor", 0)
-        typeCode = intent.getIntExtra("typeCode", 1)
+        typeCode = intent.getIntExtra("typeCode", 1) //тип кода - стираемый или не стираемый
+        var currentData = listOf<String>()
         when (idProcessor) {
             MASTER -> {
-                viewModel.eePromMaster.observe(this, {getData(viewModel.eePromMaster.value ?: listOf(), MASTER)})
+                viewModel.eePromMaster.observe(this, { getData(viewModel.eePromMaster.value ?: listOf(), MASTER) })
                 tvPocessorNameExtended.text = "Master"
+                currentData = viewModel.eePromMaster.value ?: listOf()
             }
             SLAVE -> {
-                viewModel.eePromSlave.observe(this, {getData(viewModel.eePromSlave.value ?: listOf(), SLAVE)})
+                viewModel.eePromSlave.observe(this, { getData(viewModel.eePromSlave.value ?: listOf(), SLAVE) })
                 tvPocessorNameExtended.text = "Slave"
+                currentData = viewModel.eePromSlave.value ?: listOf()
             }
+        }
+
+        //обработчик ндлинного нажания на экран для перехода на экран расшифровки черного ящика
+        tvDataExtended.setOnLongClickListener {
+            if (currentData.lastOrNull() == CAN_NEW) {
+                val intent = Intent(this, BlackBox::class.java)
+                intent.putExtra("idProcessor", idProcessor)
+                startActivity(intent)
+            }
+            true
         }
 
     }
 
     //получить данные в зависимости от признака MASTER или SLAVE
-    private fun getData(data: List<String>, idProcessor: Int){
+    private fun getData(data: List<String>, idProcessor: Int) {
         if (data.isEmpty()) {
             tvDataExtended.text = "Данные не загружены"
             return
@@ -73,6 +85,7 @@ class ExtendedDataActivity : AppCompatActivity() {
         }
         tvDataExtended.text = result
     }
+
     //декодер CAN_NEW
     private fun decoderCanNew(data: List<String>): String {
         deviceName = getStringDeviceNameCanNew(data)
@@ -89,19 +102,19 @@ class ExtendedDataActivity : AppCompatActivity() {
 
     //декодер CAN_OLD
     private fun decoderCanOld(data: List<String>, processorName: Int): String {
-            deviceName = getStringDeviceNameCanOld(applicationContext, data, processorName)
-            processorId = getStringProcessorIdCanOld(data)
-            programVersion = getStringProgramVersionCanOld(data, processorName)
-            programVersionBuild = getStringProgramVersionBuildCanOld(data, processorName)
-            programDateRelease = getStringProgramDateReleaseCanOld(data, processorName)
-            protectCode = getStringProtectCodeCanOld(data, processorName)
-            protectCodeNotErasable = getStringProtectCodeNotErasableCanOld(data, processorName)
-            decodedProtectCode = getStringDecodedProtectCodeCanOld(
-                applicationContext,
-                data,
-                processorName,
-                typeCode
-            )
+        deviceName = getStringDeviceNameCanOld(applicationContext, data, processorName)
+        processorId = getStringProcessorIdCanOld(data)
+        programVersion = getStringProgramVersionCanOld(data, processorName)
+        programVersionBuild = getStringProgramVersionBuildCanOld(data, processorName)
+        programDateRelease = getStringProgramDateReleaseCanOld(data, processorName)
+        protectCode = getStringProtectCodeCanOld(data, processorName)
+        protectCodeNotErasable = getStringProtectCodeNotErasableCanOld(data, processorName)
+        decodedProtectCode = getStringDecodedProtectCodeCanOld(
+            applicationContext,
+            data,
+            processorName,
+            typeCode
+        )
         return printFormat()
     }
 

@@ -42,7 +42,7 @@ class HandDecoderActivity : AppCompatActivity(), AdapterView.OnItemSelectedListe
         decodeCode = if (typeDevice.equals("ГАРС-С", ignoreCase = true) ||
             typeDevice.equals("ГП-Е", ignoreCase = true)
         ) {
-            decodingProtectCodeCanNew(applicationContext, code, typeDevice)
+            decodingProtectCodeCanNew(applicationContext, code, typeDevice, listOf())
         } else if (typeDevice.equals("ГКЛС-Е", ignoreCase = true) ||
             typeDevice.equals("ГАРС-Е", ignoreCase = true) ||
             typeDevice.equals("ОКД", ignoreCase = true)

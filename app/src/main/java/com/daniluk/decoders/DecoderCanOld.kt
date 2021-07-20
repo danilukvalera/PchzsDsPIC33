@@ -61,7 +61,7 @@ fun decodingProtectCodeCanOld(context: Context, codProtectState: String, deviceN
     var line = ""
     var subLine: String
     try {
-        val inputStream = context.assets.open(deviceName + "_mapCode.txt")
+        val inputStream = context.assets.open("$deviceName/mapCode.txt")
         val inputStreamReader = InputStreamReader(inputStream, "windows-1251")
         val bufferedReader = BufferedReader(inputStreamReader)
         //Находим начало блока "тип отказа"

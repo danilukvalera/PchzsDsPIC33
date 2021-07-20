@@ -97,9 +97,18 @@ object Constants {
 
     const val adressCodProtectState4 = 0x0032
 
+    const val adressParam1 = 0x0040
+    const val adressParam2 = 0x0042
+    const val adressParam3 = 0x0044
+    const val adressParam4 = 0x0046
+
+    //const val adressBlackBox = 0x00B0// Начальный адрес массива состояния компонента Measurement
+
+
     const val NO_PROTECT_STATE = "A55A"
     const val TYPE_DEFECT = "тип отказа"
     const val END_BLOCK = "конец "
+    const val TYPICAL_FAILURE_CODES = "типовые коды отказов"
 
     //*************************Для CAN_OLD**********************************************************
     const val FILE_NAME_MAP_DEVICE_CAN_OLD = "mapDevice.txt" //Адрес master для CAN_OLD
