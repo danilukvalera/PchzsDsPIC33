@@ -2,6 +2,7 @@ package com.daniluk.screens
 
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
+import android.text.Html
 import com.daniluk.MainViewModel
 import com.daniluk.R
 import com.daniluk.decoders.decodeBlackBox
@@ -25,14 +26,16 @@ class BlackBox : AppCompatActivity() {
         //var data = listOf<String>()
         viewModel.eePromMaster.observe(this, {
             if (idProcessor == MASTER) {
-                tvBlacBox.text = decodeBlackBox(this, it)
+                //tvBlacBox.text = decodeBlackBox(this, it)
+                tvBlacBox.text = Html.fromHtml(decodeBlackBox(this, it))
                 tvIdProcessor.text = MASTER_STR
             }
         })
 
         viewModel.eePromSlave.observe(this, {
             if (idProcessor == Constants.SLAVE) {
-                tvBlacBox.text = decodeBlackBox(this, it)
+                //tvBlacBox.text = decodeBlackBox(this, it)
+                tvBlacBox.text = Html.fromHtml(decodeBlackBox(this, it))
                 tvIdProcessor.text = SLAVE_STR
             }
         })

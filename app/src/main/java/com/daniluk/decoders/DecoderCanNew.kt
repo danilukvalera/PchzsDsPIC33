@@ -256,8 +256,9 @@ fun decodeBlackBox(
     data: List<String>
 ): String {
 
-    val tableParametrs = mutableListOf<List<String>>()
+    //val tableParametrs = mutableListOf<List<String>>()
     val deviceName = getStringDeviceNameCanNew(data)
+    val result = StringBuilder("\n")
 
     //Заполнить tableParametrs из файла mapBlackBox.txt
     var line: String = ""
@@ -267,14 +268,50 @@ fun decodeBlackBox(
         val bufferedReader = BufferedReader(inputStreamReader)
         bufferedReader.use {
             for (line in it.readLines()) {
+                //Пропустить пустую линию и комментарии
                 if (line.isEmpty() || line.trim().substring(0, 2) == "//") {
                     continue
                 }
-                val param = line.split("%%").toMutableList()
-                for (i in 0 until param.size){
-                    param[i] = param[i].trim()
+                //Вывести заголовок параметров
+                if (line.trim().substring(0, 2) == "##") {
+                    val title = line.trim().substring(2)
+                    //val boldTitle = "<b>$title</b>"
+                    //val boldTitle = "<i><b>$title</b></i>"
+                    //val boldTitle = "<strong>$title</strong>"
+                    //val boldTitle = "<h1><font color=\"red\">$title</font></h1>"
+                    val boldTitle = "<u><i><b><font color=\"red\" font-size=\"24sp\">$title</font></b></i></u>"
+                    result.append(boldTitle)
+                    result.append("<br>")
+                    continue
                 }
-                tableParametrs.add(param)
+                //Дешифратор параметра
+                val param = line.split("%%").toMutableList()
+                val paramAddress = param.getOrNull(0)?.substring(2)?.trim()?.toIntOrNull(16) ?: continue
+                val paramBit = param.getOrNull(1)?.trim()?.toIntOrNull()
+                val paramKeyValue = param.getOrNull(2)?.trim()?.toIntOrNull()
+                val paramName = param.getOrNull(3)?.trim() ?: continue
+                //если в параметре отсутсвует ключ для дешифрации
+                if(paramKeyValue == null){
+                    val paramValue:Int =
+                        if (paramBit == null){
+                            (data[paramAddress] + data[paramAddress + 1]).toIntOrNull(16) ?: continue
+                        }else{
+                            val value = (data[paramAddress] + data[paramAddress + 1]).toIntOrNull(16) ?: continue
+                            (value ushr paramBit) and 1
+                        }
+
+                    result.append("${paramName} ")
+                    result.append("<font color=\"green\">$paramValue</font>")
+                    result.append("<br>")
+                    result.append("<br>")
+                    //если в параметре имеется ключ для дешифрации
+                }else{
+                    val paramValue:Int = (data[paramAddress] + data[paramAddress + 1]).toIntOrNull(16) ?: continue
+                    if (paramValue == paramKeyValue){
+                        result.append(paramName)
+                        result.append("<br>")
+                    }
+                }
             }
         }
 
@@ -283,29 +320,11 @@ fun decodeBlackBox(
     } catch (e: IOException) {
         e.printStackTrace()
     } catch (e: NullPointerException) {
+        e.printStackTrace()
     }
 
     //Заполняем список результатов декодирования черного ящика
-    val result = StringBuilder("\n")
-    for (param in tableParametrs) {
-        val paramAddress = param.getOrNull(0)?.substring(2)?.toIntOrNull(16) ?: continue
-        val paramBit = param.getOrElse(1, { null })?.toIntOrNull()
-        val paramName = param.getOrNull(2) ?: continue
-        val paramValue:Int =
-            if (paramBit == null){
-                (data[paramAddress] + data[paramAddress + 1]).toIntOrNull(16) ?: continue
-            }else{
-                val value = (data[paramAddress] + data[paramAddress + 1]).toIntOrNull(16) ?: continue
-                (value ushr paramBit) and 1
-            }
-
-        result.append("${paramName}")
-        result.append("\n")
-        result.append(paramValue)
-        result.append("\n")
-        result.append("\n")
-    }
-
+    //val result = StringBuilder("\n")
     return result.toString()
 }
 
