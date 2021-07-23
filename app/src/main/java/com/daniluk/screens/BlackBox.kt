@@ -6,6 +6,8 @@ import android.text.Html
 import com.daniluk.MainViewModel
 import com.daniluk.R
 import com.daniluk.decoders.decodeBlackBox
+import com.daniluk.eePromMaster
+import com.daniluk.eePromSlave
 import com.daniluk.utils.Constants
 import com.daniluk.utils.Constants.MASTER
 import com.daniluk.utils.Constants.MASTER_STR
@@ -20,11 +22,11 @@ class BlackBox : AppCompatActivity() {
         //supportActionBar?.title = ""   //убрать текст из ActionBar
         supportActionBar?.hide()        //убрать ActionBar
 
-        val viewModel = MainViewModel.instansViewModel
+        //val viewModel = MainViewModel.instansViewModel
         val idProcessor = intent.getIntExtra("idProcessor", 0)
 
         //var data = listOf<String>()
-        viewModel.eePromMaster.observe(this, {
+        eePromMaster.observe(this, {
             if (idProcessor == MASTER) {
                 //tvBlacBox.text = decodeBlackBox(this, it)
                 tvBlacBox.text = Html.fromHtml(decodeBlackBox(this, it))
@@ -32,7 +34,7 @@ class BlackBox : AppCompatActivity() {
             }
         })
 
-        viewModel.eePromSlave.observe(this, {
+        eePromSlave.observe(this, {
             if (idProcessor == Constants.SLAVE) {
                 //tvBlacBox.text = decodeBlackBox(this, it)
                 tvBlacBox.text = Html.fromHtml(decodeBlackBox(this, it))

@@ -20,6 +20,8 @@ import com.daniluk.MainViewModel
 import com.daniluk.R
 import com.daniluk.bluetooth.BluetoothService.Companion.PERMISSION_REQUEST_CODE_ACCESS_COARSE_LOCATION
 import com.daniluk.bluetooth.BluetoothService.Companion.REQUEST_CODE_BLUETOOTH_TUNE_ON
+import com.daniluk.eePromMaster
+import com.daniluk.eePromSlave
 import com.daniluk.utils.Constants.COMMAND_BT_ON
 import com.daniluk.utils.Constants.COMMAND_SEARCH_PERMISSION_REQUEST
 import com.daniluk.utils.Constants.COMMAND_WRITE_PERMISSION_REQUEST
@@ -68,13 +70,13 @@ class MainActivity : AppCompatActivity() {
             }
             R.id.saveEEPROM -> {
                 viewModel.saveDataToFile(
-                    viewModel.eePromMaster.value ?: listOf(),
+                    eePromMaster.value ?: listOf(),
                     MASTER,
                     NAME_DIRECTOTY,
                     applicationContext
                 )
                 viewModel.saveDataToFile(
-                    viewModel.eePromSlave.value ?: listOf(),
+                    eePromSlave.value ?: listOf(),
                     SLAVE,
                     NAME_DIRECTOTY,
                     applicationContext

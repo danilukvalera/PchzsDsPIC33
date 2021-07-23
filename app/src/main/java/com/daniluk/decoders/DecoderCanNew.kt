@@ -190,7 +190,7 @@ fun decodeInterChannel(
     data: List<String>
 ): String {
 
-    var extraOptions = ""
+    var extraOptions = java.lang.StringBuilder()
     val param1 = data.getOrElse(adressParam1) { "" } + data.getOrElse(adressParam1 + 1) { "" }
     val param2 = data.getOrElse(adressParam2) { "" } + data.getOrElse(adressParam2 + 1) { "" }
     val param3 = data.getOrElse(adressParam3) { "" } + data.getOrElse(adressParam3 + 1) { "" }
@@ -230,24 +230,26 @@ fun decodeInterChannel(
                 }
             }
         } catch (e: FileNotFoundException) {
+            extraOptions.append("\n\nВнимание!!!\nФайл InterChannelId.h отсутствует для данного устройства\n")
             e.printStackTrace()
         } catch (e: IOException) {
             e.printStackTrace()
         } catch (e: NullPointerException) {
         }
         //line содержит название идентификатора
-        extraOptions = """
+        extraOptions.append( """
                                 |
                                 |Идентификатор - 0x$param1
                                 |$line
                                 |Значение в своем канале - 0x$param4
                                 |Значение в соседнем канале - 0x$param3
                                """.trimMargin()
+        )
 
     } else {
-        extraOptions = "\nОшибка ПО\nИденификатор  - 0x$param1"
+        extraOptions.append("\nОшибка ПО\nИденификатор  - 0x$param1")
     }
-    return extraOptions
+    return extraOptions.toString()
 }
 
 //декодер черного ящика
@@ -289,7 +291,8 @@ fun decodeBlackBox(
                 val paramAddress = param.getOrNull(0)?.substring(2)?.trim()?.toIntOrNull(16) ?: continue
                 val paramBit = param.getOrNull(1)?.trim()?.toIntOrNull()
                 val paramKeyValue = param.getOrNull(2)?.trim()?.toIntOrNull()
-                val paramName = param.getOrNull(3)?.trim() ?: continue
+                val paramNotation = param.getOrNull(3)?.trim()?.toIntOrNull()
+                val paramName = param.getOrNull(4)?.trim() ?: continue
                 //если в параметре отсутсвует ключ для дешифрации
                 if(paramKeyValue == null){
                     val paramValue:Int =
@@ -301,7 +304,20 @@ fun decodeBlackBox(
                         }
 
                     result.append("${paramName} ")
-                    result.append("<font color=\"green\">$paramValue</font>")
+                    result.append("<font color=\"green\">${
+                        if (paramNotation == 16){
+                            val builder = java.lang.StringBuilder()
+                            builder.append("0x")
+                            val strValue = paramValue.toString(16)
+                            for (i in strValue.length until 4) {
+                                builder.append("0")
+                            }
+                            builder.append(strValue)
+                            builder.toString()
+                        }else{
+                            paramValue.toString()
+                        }
+                    }</font>")
                     result.append("<br>")
                     result.append("<br>")
                     //если в параметре имеется ключ для дешифрации

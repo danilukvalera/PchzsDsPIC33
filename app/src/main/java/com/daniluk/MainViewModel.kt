@@ -46,6 +46,9 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.IOException
 
+var eePromMaster = MutableLiveData<List<String>>()
+var eePromSlave = MutableLiveData<List<String>>()
+
 
 class MainViewModel(application: Application) : AndroidViewModel(application) {
     //var statePCHZS = MutableLiveData(STATE_READY_READ_CODE)
@@ -53,8 +56,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     var statePCHZS = MutableLiveData(STATE_NO_CONNECT)
     var managerBluetooth = MutableLiveData(COMMAND_BT_DO_NOTHING)
     var stateBluetoothAdapter = MutableLiveData<Int>()
-    var eePromMaster = MutableLiveData<List<String>>()
-    var eePromSlave = MutableLiveData<List<String>>()
+//    var eePromMaster = MutableLiveData<List<String>>()
+//    var eePromSlave = MutableLiveData<List<String>>()
     var textTvCodeMaster = MutableLiveData("")
     var textTvCodeSlave = MutableLiveData("")
     var textTvIdDeviceMaster = MutableLiveData("")

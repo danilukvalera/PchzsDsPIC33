@@ -7,6 +7,8 @@ import androidx.appcompat.app.AppCompatActivity
 import com.daniluk.MainViewModel
 import com.daniluk.R
 import com.daniluk.decoders.*
+import com.daniluk.eePromMaster
+import com.daniluk.eePromSlave
 import com.daniluk.utils.Constants
 import com.daniluk.utils.Constants.CAN_NEW
 import com.daniluk.utils.Constants.CAN_OLD
@@ -39,20 +41,20 @@ class ExtendedDataActivity : AppCompatActivity() {
         //supportActionBar?.title = ""   //убрать текст из ActionBar
         supportActionBar?.hide()        //убрать ActionBar
 
-        val viewModel = MainViewModel.instansViewModel
+        //val viewModel = MainViewModel.instansViewModel
         val idProcessor = intent.getIntExtra("idProcessor", 0)
         typeCode = intent.getIntExtra("typeCode", 1) //тип кода - стираемый или не стираемый
         var currentData = listOf<String>()
         when (idProcessor) {
             MASTER -> {
-                viewModel.eePromMaster.observe(this, { getData(viewModel.eePromMaster.value ?: listOf(), MASTER) })
+                eePromMaster.observe(this, { getData(eePromMaster.value ?: listOf(), MASTER) })
                 tvPocessorNameExtended.text = "Master"
-                currentData = viewModel.eePromMaster.value ?: listOf()
+                currentData = eePromMaster.value ?: listOf()
             }
             SLAVE -> {
-                viewModel.eePromSlave.observe(this, { getData(viewModel.eePromSlave.value ?: listOf(), SLAVE) })
+                eePromSlave.observe(this, { getData(eePromSlave.value ?: listOf(), SLAVE) })
                 tvPocessorNameExtended.text = "Slave"
-                currentData = viewModel.eePromSlave.value ?: listOf()
+                currentData = eePromSlave.value ?: listOf()
             }
         }
 

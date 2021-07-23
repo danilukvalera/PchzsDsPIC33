@@ -4,6 +4,8 @@ import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 import com.daniluk.MainViewModel
 import com.daniluk.R
+import com.daniluk.eePromMaster
+import com.daniluk.eePromSlave
 import com.daniluk.utils.Constants
 import com.daniluk.utils.Constants.CAN_NEW
 import com.daniluk.utils.Constants.TAG_CAN_NEW
@@ -19,15 +21,15 @@ class HexDataActivity : AppCompatActivity() {
 
         supportActionBar?.hide()        //убрать ActionBar
 
-        val viewModel = MainViewModel.instansViewModel
+        //val viewModel = MainViewModel.instansViewModel
         val idProcessor = intent.getIntExtra("idProcessor", 0)
         val data: List<String>
         when (idProcessor) {
             Constants.MASTER -> {
-                data = viewModel.eePromMaster.value ?: listOf()
+                data = eePromMaster.value ?: listOf()
             }
             Constants.SLAVE -> {
-                data = viewModel.eePromSlave.value ?: listOf()
+                data = eePromSlave.value ?: listOf()
             }
             else -> data = listOf()
         }
