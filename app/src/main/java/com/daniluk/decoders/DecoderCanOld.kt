@@ -4,7 +4,7 @@ import android.content.Context
 import com.daniluk.R
 import com.daniluk.utils.Constants
 import com.daniluk.utils.Constants.END_BLOCK
-import com.daniluk.utils.Constants.FILE_NAME_MAP_DEVICE_CAN_OLD
+import com.daniluk.utils.Constants.FILE_NAME_MAP_DEVICE
 import com.daniluk.utils.Constants.ID_COD_DATE_COMPIL
 import com.daniluk.utils.Constants.ID_COD_DEVICE
 import com.daniluk.utils.Constants.ID_COD_PROTECT_STATE
@@ -112,7 +112,7 @@ fun getStringDeviceNameCanOld(context: Context, data: List<String>, idMicrocontr
 
     //ищем по коду название прибора в файле mapDevice.txt
     try {
-        val inputStream = context.assets.open(FILE_NAME_MAP_DEVICE_CAN_OLD)
+        val inputStream = context.assets.open(FILE_NAME_MAP_DEVICE)
         val inputStreamReader = InputStreamReader(inputStream, "windows-1251")
         val bufferedReader = BufferedReader(inputStreamReader)
         //проходим блок "тип прибора" в поисках имени устройства

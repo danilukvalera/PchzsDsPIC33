@@ -1,16 +1,16 @@
 package com.daniluk
 
-//import android.R
 import android.Manifest
 import android.app.Application
-import android.app.slice.Slice
 import android.content.ContentResolver
 import android.content.Context
 import android.content.Context.MODE_PRIVATE
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.util.Log
+import android.widget.Toast
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.MutableLiveData
@@ -44,6 +44,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.io.File
 import java.io.IOException
 
 var eePromMaster = MutableLiveData<List<String>>()
@@ -52,27 +53,76 @@ var eePromSlave = MutableLiveData<List<String>>()
 
 class MainViewModel(application: Application) : AndroidViewModel(application) {
     //var statePCHZS = MutableLiveData(STATE_READY_READ_CODE)
-
+    val app = application
     var statePCHZS = MutableLiveData(STATE_NO_CONNECT)
     var managerBluetooth = MutableLiveData(COMMAND_BT_DO_NOTHING)
     var stateBluetoothAdapter = MutableLiveData<Int>()
-//    var eePromMaster = MutableLiveData<List<String>>()
+
+    //    var eePromMaster = MutableLiveData<List<String>>()
 //    var eePromSlave = MutableLiveData<List<String>>()
     var textTvCodeMaster = MutableLiveData("")
     var textTvCodeSlave = MutableLiveData("")
     var textTvIdDeviceMaster = MutableLiveData("")
     var textTvIdDeviceSlave = MutableLiveData("")
-    private val context = getApplication<Application>() as Context
+
+    //private val context = getApplication<Application>() as Context
+    val context = application.applicationContext
     val bluetoothService: BluetoothService by lazy { BluetoothService(context) }
     var adressPchzs: String
 
     var flagfirstConnect =
-            false        //true - кнопка подключить нажималась хотя бы один раз, false - еще не нажималась
+        false        //true - кнопка подключить нажималась хотя бы один раз, false - еще не нажималась
     var flagActionDisconnect = false    //намерение отключиться
     var flagActionConnect = false       //намерение подключиться
     var numberOfConnectionAttempts = 0  //количество попыток подключения
-
     var responsePchzs = ""
+
+    var flagSaveNeed = false            //флаг вывода сообщения о необходимости сохранения
+    var flagAppOff = MutableLiveData<Boolean>(false)  //флаг-команда выхода из приложения
+    var flagCreateDialog =
+        MutableLiveData<Boolean>(false)  //флаг-команда создания диалога. Сделано из-за того что при создании диалога
+    // из диалога (при диалоге выхода из приложения) если напрмую лямбду с созданием диалога передавать,
+    // то при повороте экрана краш приложения из-за пересоздания активити и получения нового FragmetnManager
+
+    //Данные для создания диалога (нужно хранить здесь иначе при повороте экрана
+    // в классе диалога подставляются значения по умолчанию)
+    var title_v: String = ""
+    var message_v: String = ""
+    var cancelable_v: Boolean = false
+    var positiveButton_v: String = ""
+    var positiveFun_v: () -> Unit = {}
+    var negativeButton_v: String = ""
+    var negativeFun_v: () -> Unit = {}
+    var neutralButton_v: String = ""
+    var neutralFun_v: () -> Unit = {}
+
+    var patchFileMaster = ""      //путь сохраненного файла master
+    var patchFileSlave = ""       //путь сохраненного файла slave
+
+    var toast = MutableLiveData("")                //строка для вывода в всплывающем окне (Toast)
+
+    fun setDataDialog(
+        title: String = "",
+        message: String = "",
+        cancelable: Boolean = false,
+        positiveButton: String = "",
+        positiveFun: () -> Unit = {},
+        negativeButton: String = "",
+        negativeFun: () -> Unit = {},
+        neutralButton: String = "",
+        neutralFun: () -> Unit = {}
+    ) {
+        title_v = title
+        message_v = message
+        cancelable_v = cancelable
+        positiveButton_v = positiveButton
+        positiveFun_v = positiveFun
+        negativeButton_v = negativeButton
+        negativeFun_v = negativeFun
+        neutralButton_v = neutralButton
+        neutralFun_v = neutralFun
+    }
+
 
     companion object {
         lateinit var instansViewModel: MainViewModel
@@ -81,9 +131,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     //блок инициализации
     init {
         val sharedPref =
-                context.getSharedPreferences(context.getString(R.string.ADRESS_PCHZS), MODE_PRIVATE)
+            context.getSharedPreferences(context.getString(R.string.ADRESS_PCHZS), MODE_PRIVATE)
         adressPchzs = sharedPref.getString("adressPchzs", "") ?: ""
     }
+
 
     //очистка всего перед закрытием viewModel
     override fun onCleared() {
@@ -93,14 +144,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             bluetoothService.clientSocket?.close()
         } catch (e: IOException) {
             Log.e(
-                    TAG_BT_CONNECT,
-                    "Не удалось закрыть клиентский сокет после завершения приложения",
-                    e
+                TAG_BT_CONNECT,
+                "Не удалось закрыть клиентский сокет после завершения приложения",
+                e
             )
         }
         //Чтение записанного ранее адреса ПЧЗС
         val sharedPref =
-                context.getSharedPreferences(context.getString(R.string.ADRESS_PCHZS), MODE_PRIVATE)
+            context.getSharedPreferences(context.getString(R.string.ADRESS_PCHZS), MODE_PRIVATE)
         val savedAdress = sharedPref.getString("adressPchzs", "") ?: ""
         //Если ранее записаный адрес не совпадает с текущим - перезаписываем
 
@@ -108,24 +159,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             val editor = sharedPref.edit()
             editor.putString("adressPchzs", adressPchzs)
             editor.apply()
-        }
-    }
-
-    //обработчик кнопки чтения ЗС
-    fun clickReadButton() {
-        when (statePCHZS.value ?: STATE_NO_CONNECT) {
-            STATE_NO_CONNECT -> {
-                clearDataScreen()
-                flagActionConnect = true
-                numberOfConnectionAttempts = 1
-                flagfirstConnect = true
-                bluetoothService.connectPCHZS()
-
-                //bluetoothService.logConnect = ""
-            }
-            STATE_READY_READ_CODE -> {
-                readProtectState()
-            }
         }
     }
 
@@ -137,13 +170,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             bluetoothService.dataTransmissionAndReceive(REMOV_PROTECT_STATE)
             //извлечение данных
-            when{
+            when {
                 responsePchzs.indexOf(RESET_PROTECT_STATE_END) >= 0 -> {
                     textTvCodeMaster.value = "Защитное состояние снято"
                     bluetoothService.showBtLog("removeProtectState():  Защитное состояние снято")
                 }
                 responsePchzs.indexOf(ERROR_POWER_DEVICE) >= 0 -> {
-                    textTvCodeMaster.value = "Ошибка снятия защитного состояния. Отсутствует питание объектного контроллера"
+                    textTvCodeMaster.value =
+                        "Ошибка снятия защитного состояния. Отсутствует питание объектного контроллера"
                     bluetoothService.showBtLog("removeProtectState():  Ошибка снятия защитного состояния. Отсутствует питание объектного контроллера")
                 }
                 else -> {
@@ -160,12 +194,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     //Чтение защитного состояния
-    private fun readProtectState() {
+    fun readProtectState() {
         clearDataScreen()
         eePromMaster = MutableLiveData<List<String>>()
         eePromSlave = MutableLiveData<List<String>>()
         responsePchzs = ""
-        statePCHZS.value = STATE_READ_CODE_IN_PROGRESS
+        statePCHZS.postValue(STATE_READ_CODE_IN_PROGRESS)
         bluetoothService.logConnect = ""
         viewModelScope.launch {
             bluetoothService.dataTransmissionAndReceive(READ_PROTECT_STATE)
@@ -175,20 +209,26 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             //responsePchzs = "001C011001021001041C011001021001041C031001041001041C050005060903041C100000111B58041C164FBD17E668041C1A00001B0000001C011001021001001C031001041001001C050005060903001C100000111B58001C169A5E178C4B001C1A00001B0000READ_ZS_END_CAN_OLD";
 
 
+            //анализ принятых данных на флаг отстутсвия ЗС (для CAN1)
+            val isFlagNoProtectState = responsePchzs.indexOf(Constants.CAN1_NO_PROTECT_STATE)
             //анализ принятых данных на флаг окончания передачи
             val lengthReceiveData = responsePchzs.indexOf(Constants.READ_ZS_END)
-            //val lengthReceiveData = 100
 
-            //извлечение данных
-            if (lengthReceiveData > 0) {
+            if (isFlagNoProtectState >= 0) {
+                textTvCodeMaster.postValue(context.getString(R.string.NO_PROTECT_STATE_OR_DEVICE_FAILURE))
+                responsePchzs = ""
+            } else if (lengthReceiveData > 0) {  //извлечение данных
                 suspend {
                     withContext(Dispatchers.IO) {
                         eePromMaster.postValue(extractData(MASTER))
                         eePromSlave.postValue(extractData(SLAVE))
+                        //если хотя бы с одного МК считаны данные установить флаг о необходимости их сохраниения
+                        if (eePromMaster.value?.isNotEmpty() ?: false || eePromSlave.value?.isNotEmpty() ?: false) {
+                            flagSaveNeed = true
+                        }
                     }
                 }()
                 decoderProtectCodeForMainUi()
-
             } else {
                 textTvCodeMaster.postValue(context.getString(R.string.ERROR_READING_PROTECT_STATE) + "\n" + responsePchzs)
                 responsePchzs = ""
@@ -208,15 +248,19 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         when (dataMaster.lastOrNull() ?: "") {
             CAN_NEW -> {
                 textTvCodeMaster.postValue(
-                    formattingTextForMessengeProtectCode(getStringProtectCodeCanNew(dataMaster),
-                    getStringProtectCodeNotErasableCanNew(dataMaster))
+                    formattingTextForMessengeProtectCode(
+                        getStringProtectCodeCanNew(dataMaster),
+                        getStringProtectCodeNotErasableCanNew(dataMaster)
+                    )
                 )
-                textTvIdDeviceMaster.postValue(getStringDeviceNameCanNew(dataMaster))
+                textTvIdDeviceMaster.postValue(getStringDeviceNameCanNew(context, dataMaster))
             }
             CAN_OLD -> {
                 textTvCodeMaster.postValue(
-                    formattingTextForMessengeProtectCode(getStringProtectCodeCanOld(dataMaster, MASTER),
-                    getStringProtectCodeNotErasableCanOld(dataMaster, MASTER))
+                    formattingTextForMessengeProtectCode(
+                        getStringProtectCodeCanOld(dataMaster, MASTER),
+                        getStringProtectCodeNotErasableCanOld(dataMaster, MASTER)
+                    )
                 )
                 textTvIdDeviceMaster.postValue(getStringDeviceNameCanOld(context, dataMaster, MASTER))
             }
@@ -231,15 +275,19 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         when (dataSlave.lastOrNull() ?: "") {
             CAN_NEW -> {
                 textTvCodeSlave.postValue(
-                    formattingTextForMessengeProtectCode(getStringProtectCodeCanNew(dataSlave),
-                    getStringProtectCodeNotErasableCanNew(dataSlave))
+                    formattingTextForMessengeProtectCode(
+                        getStringProtectCodeCanNew(dataSlave),
+                        getStringProtectCodeNotErasableCanNew(dataSlave)
+                    )
                 )
-                textTvIdDeviceSlave.postValue(getStringDeviceNameCanNew(dataSlave))
+                textTvIdDeviceSlave.postValue(getStringDeviceNameCanNew(context, dataSlave))
             }
             CAN_OLD -> {
                 textTvCodeSlave.postValue(
-                    formattingTextForMessengeProtectCode(getStringProtectCodeCanOld(dataSlave, SLAVE),
-                    getStringProtectCodeNotErasableCanOld(dataSlave, SLAVE))
+                    formattingTextForMessengeProtectCode(
+                        getStringProtectCodeCanOld(dataSlave, SLAVE),
+                        getStringProtectCodeNotErasableCanOld(dataSlave, SLAVE)
+                    )
                 )
                 textTvIdDeviceSlave.postValue(getStringDeviceNameCanOld(context, dataSlave, SLAVE))
             }
@@ -254,36 +302,50 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     //Очистить данные на экране
     fun clearDataScreen() {
-        textTvCodeMaster.value = ""
-        textTvCodeSlave.value = ""
-        textTvIdDeviceMaster.value = ""
-        textTvIdDeviceSlave.value = ""
+        textTvCodeMaster.postValue("")
+        textTvCodeSlave.postValue("")
+        textTvIdDeviceMaster.postValue("")
+        textTvIdDeviceSlave.postValue("")
     }
 
     //Записать EEPROM в Файл
-    fun saveDataToFile(
-            data: List<String>,
-            idProcessor: Int,
-            nameDirectory: String,
-            context: Context
-    ) {
-        viewModelScope.launch {
-            //проверка и запрос разрешения
-            requestPermissionExternalStorage()
-            //Запись файла
-            saveFile(data, idProcessor, nameDirectory, context)
+    suspend fun saveDataToFiles() {
+        //проверка и запрос разрешения
+        requestPermissionExternalStorage()
+        //Запись файла master
+        patchFileMaster = saveFile(eePromMaster.value ?: listOf(), MASTER, context)
+        patchFileSlave = saveFile(eePromSlave.value ?: listOf(), SLAVE, context)
+
+        if (!patchFileMaster.isEmpty() && !patchFileSlave.isEmpty()) {
+            //Toast.makeText(context, "Данные успешно сохранены", Toast.LENGTH_SHORT).show()
+            toast.postValue("Данные успешно сохранены")
+        } else {
+            if (patchFileMaster.isEmpty() && patchFileSlave.isEmpty()) {
+                //Toast.makeText(context, "Данные не сохранены", Toast.LENGTH_SHORT).show()
+                toast.postValue("Данные не сохранены")
+            } else {
+                if (patchFileMaster.isEmpty()) {
+                    //Toast.makeText(context, "Данные master не сохранены", Toast.LENGTH_SHORT).show()
+                    toast.postValue("Данные master не сохранены")
+                }
+                if (patchFileSlave.isEmpty()) {
+                    //Toast.makeText(context, "Данные slave не сохранены", Toast.LENGTH_SHORT).show()
+                    toast.postValue("Данные slave не сохранены")
+                }
+            }
         }
+        flagSaveNeed = false
+        bluetoothService.showBtLog("UriMaster = $patchFileMaster     UriSlave = $patchFileSlave")
     }
+
 
     //Читать EEPROM из Файла
     fun readDataFromFile(
-            uriFile: Uri,
-            contentResolver: ContentResolver,
-            context: Context
+        uriFile: Uri
     ) {
-        eePromMaster = MutableLiveData<List<String>>()
-        eePromSlave = MutableLiveData<List<String>>()
-
+        eePromMaster = MutableLiveData<List<String>>()  //vvvvvvvvvvvvvvv
+        eePromSlave = MutableLiveData<List<String>>()   //vvvvvvvvvvvvvvv
+        val contentResolver = context.contentResolver
         viewModelScope.launch {
             //проверка и запрос разрешения
             requestPermissionExternalStorage()
@@ -313,31 +375,28 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     suspend fun requestPermissionExternalStorage() {
-        withContext(Dispatchers.IO) {
-            var permissionStatus =
-                    ContextCompat.checkSelfPermission(
-                            context,
-                            Manifest.permission.WRITE_EXTERNAL_STORAGE
+        var permissionStatus =
+            ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.WRITE_EXTERNAL_STORAGE
+            )
+        bluetoothService.showBtLog("saveDataToFile(): проверка разрешения записи в память: permissionStatus = $permissionStatus")
+        //если разрешения нет, запрос на получение разрешения
+        //ответ на запрос обрабатывается в функции onRequestPermissionsResult()
+        if (permissionStatus != PackageManager.PERMISSION_GRANTED) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) {
+                bluetoothService.showBtLog("saveDataToFile(): Разрешения поиска нет. Запрос разрешения")
+                managerBluetooth.postValue(COMMAND_WRITE_PERMISSION_REQUEST)
+                //ожидание разрешения поиска
+                while (permissionStatus != PackageManager.PERMISSION_GRANTED) {
+                    permissionStatus = ContextCompat.checkSelfPermission(
+                        context,
+                        Manifest.permission.WRITE_EXTERNAL_STORAGE
                     )
-            bluetoothService.showBtLog("saveDataToFile(): проверка разрешения записи в память: permissionStatus = $permissionStatus")
-            //если разрешения нет, запрос на получение разрешения
-            //ответ на запрос обрабатывается в функции onRequestPermissionsResult()
-            if (permissionStatus != PackageManager.PERMISSION_GRANTED) {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) {
-                    bluetoothService.showBtLog("saveDataToFile(): Разрешения поиска нет. Запрос разрешения")
-                    managerBluetooth.postValue(COMMAND_WRITE_PERMISSION_REQUEST)
-                    //ожидание разрешения поиска
-                    while (permissionStatus != PackageManager.PERMISSION_GRANTED) {
-                        permissionStatus = ContextCompat.checkSelfPermission(
-                                context,
-                                Manifest.permission.WRITE_EXTERNAL_STORAGE
-                        )
-                        bluetoothService.showBtLog("saveDataToFile(): Ждем разрешения...")
-                        delay(1000)
-                    }
+                    bluetoothService.showBtLog("saveDataToFile(): Ждем разрешения...")
+                    delay(1000)
                 }
             }
         }
-
     }
 }

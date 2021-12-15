@@ -204,6 +204,8 @@ class BluetoothService(private val context: Context) {
                 showBtLog("connectDevice():  после подключения. Установили готовность к чтению ЗС")
                 viewModel.adressPchzs = bluetoothPCHZS?.address ?: ""
                 showBtLog("connectDevice():  после подключения. сохранили адрес ПЧЗС")
+                viewModel.numberOfConnectionAttempts = 0 //ddd сбросить счетчик автоподключений
+
             } catch (e: IOException) {
                 e.printStackTrace()
                 showBtLog("connectDevice():  Ошибка подключения. Выброшено исключение: ${e.message}, Установить STATE_NO_CONNECT")

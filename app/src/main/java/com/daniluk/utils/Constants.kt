@@ -42,18 +42,20 @@ object Constants {
     const val FLAG_DECODE_CODE = 1
     const val FLAG_DECODE_NON_ERASABLE_CODE = 2
 
-    const val TAG_CAN_NEW = 1
-    const val TAG_CAN_OLD = 2
-    const val TAG_PP3S = 3
-    const val TAG_GP3S = 4
+//    const val TAG_CAN_NEW = 1
+//    const val TAG_CAN_OLD = 2
+//    const val TAG_PP3S = 3
+//    const val TAG_GP3S = 4
 
-    const val NAME_FILE_MASTER_HEX = "_master"
-    const val NAME_FILE_SLAVE_HEX = "_slave"
-    const val NAME_DIRECTOTY = "PCHZS"
+    const val NAME_FILE_MASTER_HEX = "master"
+    const val NAME_FILE_SLAVE_HEX = "slave"
+    const val NAME_DIRECTORY = "PCHZS"
 
 
     //ответы модуля сопряжения
     const val READ_ZS_END = "READ_ZS_END" //признак окончания процедуры чтения ЗС
+    const val CAN1_NO_PROTECT_STATE = "_CAN1_NO_PROTECT_STATE"  //данные с устройства не передаются и есть штатный обмен
+                                                                // между МК. т. е. устройство не находится в ЗС
 
     const val CAN_NEW = "_CAN_NEW" //признак данных принятых по новому CAN
 
@@ -68,42 +70,33 @@ object Constants {
     const val ERROR_POWER_DEVICE = "_ERROR_POWER_DEVICE_";           //признак отсутствия питания ОК
     const val RESET_PROTECT_STATE_END = "RESET_PROTECT_STATE_END" //признак окончания процедуры снятия ЗС
 
-    const val RESET_PROTECT_STATE_OK = "_RESET_PROTECT_STATE_OK";    //признак успешного выполнения снятия ЗС
 
- //*************************Для CAN_NEW**********************************************************
+
+    const val FILE_NAME_MAP_DEVICE = "mapDevice.txt" //название файла с типами устройств
+    const val FILE_IS_FUN_DEVICE_NUMBER = "isFunDeviceNumber.txt" //название файла с типами устройств в которых реализована запись зав. номера
+
+    //*************************Для CAN_NEW**********************************************************
     const val ID_MASTER_NEW_CAN = "02A0" //Адрес master для CAN_NEW
-
     const val ID_SLAVE_NEW_CAN = "02A1" //Адрес slave для CAN_NEW
 
+    const val deviceNameStartAddress = 0x00
+    const val pocessorIdStartAddress = 0x0E
+    const val programVersionStartAddress = 0x10
+    const val programVersionEndAddress = 0x20
+    const val programDateReleaseStartAddress = 0x25
+    const val programDateReleaseEndAddress = 0x30
+    const val defectFileNameStartAddress = 0x50
+    const val defectFileNameEndAddress = 0x6E
+    const val defectStringNumberAddress = 0x6E
+    const val MANUFACTURERS_NUMBER_START_ADDRESS = 0x05D0
 
-    const val deviceNameStartAdress = 0x02
-    const val deviceNameEndAdress = 0x0E
-    const val pocessorIdStartAdress = 0x0E
-    const val pocessorIdEndAdress = 0x10
-    const val programVersionStartAdress = 0x10
-    const val programVersionEndAdress = 0x20
+    const val addressCodProtectState1 = 0x0030
+    const val addressCodProtectState4 = 0x0032
 
-    //public static int programDateReleaseStartAdress = 0x20;
-    const val programDateReleaseStartAdress = 0x25
-    const val programDateReleaseEndAdress = 0x30
-    const val defectFileNameStartAdress = 0x50
-    const val defectFileNameEndAdress = 0x6E
-    const val defectStringNumberAdress = 0x6E
-
-    const val adressCodProtectState1 = 0x0030
-    const val adressCodProtectState2 = 0x0030 //0x0FF0;   таких адресов в памяти нет!!!
-
-    const val adressCodProtectState3 = 0x0030 //0x0FF2;   таких адресов в памяти нет!!!
-
-    const val adressCodProtectState4 = 0x0032
-
-    const val adressParam1 = 0x0040
-    const val adressParam2 = 0x0042
-    const val adressParam3 = 0x0044
-    const val adressParam4 = 0x0046
-
-    //const val adressBlackBox = 0x00B0// Начальный адрес массива состояния компонента Measurement
-
+    const val addressParam1 = 0x0040
+    const val addressParam2 = 0x0042
+    const val addressParam3 = 0x0044
+    const val addressParam4 = 0x0046
 
     const val NO_PROTECT_STATE = "A55A"
     const val TYPE_DEFECT = "тип отказа"
@@ -111,9 +104,6 @@ object Constants {
     const val TYPICAL_FAILURE_CODES = "типовые коды отказов"
 
     //*************************Для CAN_OLD**********************************************************
-    const val FILE_NAME_MAP_DEVICE_CAN_OLD = "mapDevice.txt" //Адрес master для CAN_OLD
-
-
     const val ID_MASTER_OLD_CAN = "001C" //Адрес master для CAN_OLD
 
     const val ID_SLAVE_OLD_CAN = "041C" //Адрес slave для CAN_OLD

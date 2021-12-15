@@ -25,4 +25,5 @@
     <string name="ERROR_TRANSMISSION_OR_READING_DATA">Ошибка передачи или чтения данных</string>
     <string name="ERROR_READING_PROTECT_STATE">Ошибка чтения защитного состояния</string>
     <string name="ERROR_REMOVE_PROTECT_STATE">Ошибка снятия защитного состояния</string>
+    <string name="NO_PROTECT_STATE_OR_DEVICE_FAILURE">Отсутствует передача данных "черного" ящика. Прибор не находится в защитном состоянии или не исправен</string>
 </resources>

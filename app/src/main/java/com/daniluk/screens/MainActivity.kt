@@ -8,6 +8,7 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.os.Environment
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
@@ -28,7 +29,6 @@ import com.daniluk.utils.Constants.COMMAND_WRITE_PERMISSION_REQUEST
 import com.daniluk.utils.Constants.FLAG_DECODE_CODE
 import com.daniluk.utils.Constants.FLAG_DECODE_NON_ERASABLE_CODE
 import com.daniluk.utils.Constants.MASTER
-import com.daniluk.utils.Constants.NAME_DIRECTOTY
 import com.daniluk.utils.Constants.NUMBER_ATTEMPTS_AUTO_CONNECT
 import com.daniluk.utils.Constants.SLAVE
 import com.daniluk.utils.Constants.STATE_CONNECTION_IN_PROGRESS
@@ -43,13 +43,53 @@ import com.daniluk.utils.Constants.colorGREEN
 import com.daniluk.utils.Constants.colorGray
 import com.daniluk.utils.Constants.colorRED
 import com.daniluk.utils.PERMISSION_REQUEST_CODE_WRITE_READ_EXTERNAL_STORAGE
-import com.daniluk.utils.REQUEST_CODE_SELECTION_FILE
+import com.daniluk.utils.REQUEST_CODE_SELECTION_FILE_TO_READ
+import com.daniluk.utils.REQUEST_CODE_SELECTION_FILE_TO_SEND
 import kotlinx.android.synthetic.main.activity_main.*
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancelChildren
+import kotlinx.coroutines.launch
+import java.io.File
 
 class MainActivity : AppCompatActivity() {
     private val viewModel: MainViewModel by viewModels()
-    private val TYPE_READ_FILE = "*/*"
+
+    override fun onBackPressed() {
+        //Диалог "Вы действительно хотите выйти?"
+        viewModel.setDataDialog(
+            title = "Выход из приложения",
+            message = "Вы действительно хотите выйти?",
+            negativeButton = "Нет",
+            positiveButton = "Да",
+            positiveFun = if (viewModel.flagSaveNeed) { //если данные не сохранены диалог о сохранении
+                {
+                    viewModel.setDataDialog(
+                        title = "ЗС считано но данные не сохранены",
+                        message = "Сохранить?",
+                        negativeButton = "Нет",
+                        negativeFun = {
+                            viewModel.flagAppOff.value = true
+                        },
+                        positiveButton = "Да",
+                        positiveFun = {
+                            viewModel.viewModelScope.launch(Dispatchers.IO) {
+                                viewModel.saveDataToFiles()
+                                viewModel.flagAppOff.postValue(true)
+                            }
+                        }
+
+                    )
+                    viewModel.flagCreateDialog.value = true
+                }
+            } else {  //если данные сохранены или нечего сохранять просто выходим
+                {
+                    viewModel.flagAppOff.value = true
+                }
+            }
+
+        )
+        viewModel.flagCreateDialog.value = true
+    }
 
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {
         menuInflater.inflate(R.menu.main_menu, menu)
@@ -62,30 +102,16 @@ class MainActivity : AppCompatActivity() {
                 val intent = Intent(this, HandDecoderActivity::class.java)
                 startActivity(intent)
             }
-            R.id.disconnect -> {
-                viewModel.flagActionDisconnect = true
-                viewModel.clearDataScreen()
-                viewModel.bluetoothService.disconnectPCHZS()
-                viewModel.bluetoothService.logConnect = ""
+            R.id.sendTo -> {
+                sendFile()
             }
             R.id.saveEEPROM -> {
-                viewModel.saveDataToFile(
-                    eePromMaster.value ?: listOf(),
-                    MASTER,
-                    NAME_DIRECTOTY,
-                    applicationContext
-                )
-                viewModel.saveDataToFile(
-                    eePromSlave.value ?: listOf(),
-                    SLAVE,
-                    NAME_DIRECTOTY,
-                    applicationContext
-                )
+                viewModel.viewModelScope.launch(Dispatchers.IO) {
+                    viewModel.saveDataToFiles()
+                }
             }
             R.id.readEEPROM -> {
-                val intent = Intent(Intent.ACTION_GET_CONTENT)
-                intent.type = TYPE_READ_FILE
-                startActivityForResult(intent, REQUEST_CODE_SELECTION_FILE)
+                downloadFileFromMemory()
             }
             R.id.displayEEpromMaster -> {
                 val intent = Intent(this, HexDataActivity::class.java)
@@ -109,6 +135,7 @@ class MainActivity : AppCompatActivity() {
         return super.onOptionsItemSelected(item)
     }
 
+
     @RequiresApi(Build.VERSION_CODES.M)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -118,7 +145,39 @@ class MainActivity : AppCompatActivity() {
 
         //Обработчик кнопки btReadProtectState
         btReadProtectState.setOnClickListener {
-            viewModel.clickReadButton()
+            when (viewModel.statePCHZS.value ?: STATE_NO_CONNECT) {
+                STATE_NO_CONNECT -> {
+                    viewModel.clearDataScreen()
+                    viewModel.flagActionConnect = true
+                    viewModel.numberOfConnectionAttempts = 1
+                    viewModel.flagfirstConnect = true
+                    viewModel.bluetoothService.connectPCHZS()
+                }
+                STATE_READY_READ_CODE -> {
+                    //если есть считанные и не сохраненные данные, показать диалог о необходимости сохранения
+                    if (viewModel.flagSaveNeed) {
+                        viewModel.setDataDialog(
+                            title = "ЗС считано но данные не сохранены",
+                            message = "Сохранить?",
+                            negativeButton = "Нет",
+                            negativeFun = {
+                                viewModel.flagSaveNeed = false
+                                viewModel.readProtectState()
+                            },
+                            positiveButton = "Да",
+                            positiveFun = {
+                                viewModel.viewModelScope.launch(Dispatchers.IO) {
+                                    viewModel.saveDataToFiles()
+                                    viewModel.readProtectState()
+                                }
+                            }
+                        )
+                        viewModel.flagCreateDialog.value = true
+                    } else {
+                        viewModel.readProtectState()
+                    }
+                }
+            }
         }
         //обработчик нажатия на окна tvCodeMaster и tvCodeSlave
         tvCodeMaster.setOnClickListener {
@@ -133,14 +192,14 @@ class MainActivity : AppCompatActivity() {
             intent.putExtra("typeCode", FLAG_DECODE_CODE)
             startActivity(intent)
         }
-        tvCodeMaster.setOnLongClickListener{
+        tvCodeMaster.setOnLongClickListener {
             val intent = Intent(this, ExtendedDataActivity::class.java)
             intent.putExtra("idProcessor", MASTER)
             intent.putExtra("typeCode", FLAG_DECODE_NON_ERASABLE_CODE)
             startActivity(intent)
             true
         }
-        tvCodeSlave.setOnLongClickListener{
+        tvCodeSlave.setOnLongClickListener {
             val intent = Intent(this, ExtendedDataActivity::class.java)
             intent.putExtra("idProcessor", SLAVE)
             intent.putExtra("typeCode", FLAG_DECODE_NON_ERASABLE_CODE)
@@ -188,13 +247,37 @@ class MainActivity : AppCompatActivity() {
         viewModel.textTvCodeSlave.observe(this, { text -> tvCodeSlave.text = text })
         viewModel.textTvIdDeviceMaster.observe(this, { text -> tvIdDeviceMaster.text = text })
         viewModel.textTvIdDeviceSlave.observe(this, { text -> tvIdDeviceSlave.text = text })
+        viewModel.flagAppOff.observe(this, {
+            if (it) {
+                super.onBackPressed()
+            }
+        })
+        viewModel.flagCreateDialog.observe(this, {
+            if (it) {
+                viewModel.flagCreateDialog.value = false
+                ConfirmationDialogFragment().show(supportFragmentManager, ConfirmationDialogFragment.TAG)
+            }
+        })
+        viewModel.toast.observe(this, {
+            if (!it.equals("")) {
+                Toast.makeText(this, it, Toast.LENGTH_SHORT).show()
+            }
+        })
 
 
         MainViewModel.instansViewModel = viewModel   //Сохранить ссылку в экземпляре viewModel
+
+
+        //vvvvvvvvvv
+        //viewModel.readDataFromFile(Uri.fromFile(File("/storage/emulated/0/PCHZS/ГАРС-С__261121_1550_master.hex")))
+        //viewModel.readDataFromFile(Uri.fromFile(File("/storage/emulated/0/PCHZS/ГАРС-С__slave_200721_1822.hex")))
+
+        //vvvvvvvvvv
     }
 
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        super.onActivityResult(requestCode, resultCode, data)
+    override fun onActivityResult(requestCode: Int, resultCode: Int, intentIn: Intent?) {
+        super.onActivityResult(requestCode, resultCode, intentIn)
+
         if (requestCode == REQUEST_CODE_BLUETOOTH_TUNE_ON) {
             //Ответ на запрос включения Bluetooth
             if (resultCode == Activity.RESULT_CANCELED) {
@@ -210,12 +293,34 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        if (requestCode == REQUEST_CODE_SELECTION_FILE) {
-            //ответ на выбор файла в проводнике
+        if (requestCode == REQUEST_CODE_SELECTION_FILE_TO_READ) {
+            //ответ на выбор файла для чтения
             if (resultCode == RESULT_OK) {
-                val uriFile = data?.data ?: return
-                val contentResolver = contentResolver
-                viewModel.readDataFromFile(uriFile, contentResolver, applicationContext)
+                val uriFile = intentIn?.data ?: return
+                //val contentResolver = contentResolver
+                //viewModel.readDataFromFile(uriFile, contentResolver, applicationContext)
+                //viewModel.readDataFromFile(uriFile, applicationContext)
+                viewModel.readDataFromFile(uriFile)
+            }
+        }
+
+        if (requestCode == REQUEST_CODE_SELECTION_FILE_TO_SEND) {
+            if (resultCode == RESULT_OK) {
+                val uri = intentIn?.data
+                if (uri != null) {
+                    val shareIntent: Intent = Intent().apply {
+                        action = Intent.ACTION_SEND
+                        //val uri = uri
+                        putExtra(Intent.EXTRA_STREAM, uri)
+                        type = "image/jpeg"
+                        //type = "file/*"
+                    }
+                    startActivity(Intent.createChooser(shareIntent, "Выберите приложение для отправки"))
+                } else {
+                    Toast.makeText(this, "Ошибка выбора файла Uri = null", Toast.LENGTH_SHORT).show()
+                }
+            } else {
+                Toast.makeText(this, "Ошибка выбора файла. resultCode = CANCELED", Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -259,6 +364,8 @@ class MainActivity : AppCompatActivity() {
 
     }
 
+
+    //Установка свойств обектов на экране в зависимости  сосотяния системы ПЧЗС
     private fun setStateView(statePCHZS: Int?) {
         statePCHZS.let {
             when (statePCHZS) {
@@ -305,6 +412,8 @@ class MainActivity : AppCompatActivity() {
                             viewModel.bluetoothService.showBtLog("setStateView():  Колличество попыток подключения превысило норму, повторного подключения не нужно")
                             viewModel.textTvCodeMaster.postValue(getString(R.string.ERROR_CONNECT))
                             viewModel.flagActionConnect = false
+                            viewModel.numberOfConnectionAttempts = 0     //ddd сбросить счетчик автоподключений
+
                         }
                     }
                 }
@@ -341,7 +450,104 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         }
+    }
+
+    //Отправить файл с EEPROM через E-mail или мессенджер
+    private fun sendFile() {
+        //если считанных данных нет то выбор файлов для отправки
+        if (eePromMaster.value?.isEmpty() ?: true && eePromSlave.value?.isEmpty() ?: true) {
+            if (Environment.getExternalStorageState() != Environment.MEDIA_MOUNTED) {
+                Toast.makeText(this, "SD-карта не доступна", Toast.LENGTH_SHORT).show()
+                return
+            }
+            val intent = Intent(Intent.ACTION_GET_CONTENT)
+            intent.setType("*/*")
+            startActivityForResult(intent, REQUEST_CODE_SELECTION_FILE_TO_SEND)
+        } else {// ели есть считанные данные, то диалог что отправлять, считанные данные или сохраненные ранее
+            viewModel.setDataDialog(
+                title = "Отправить данные об отказе",
+                message = "Какие данные отправлять?",
+                positiveButton = "Считанные данные",
+                positiveFun = {
+                    //viewModel.sendFiles()
+                    viewModel.viewModelScope.launch(Dispatchers.IO) {
+                        viewModel.saveDataToFiles()
+                        val shareIntent: Intent = Intent()
+                        shareIntent.action = Intent.ACTION_SEND_MULTIPLE
+                        shareIntent.type = "image/jpeg"
+
+                        val uris = arrayListOf<Uri>()
+                        if (!viewModel.patchFileMaster.isEmpty()) {
+                            var uriMmaster = Uri.fromFile(File(viewModel.patchFileMaster))
+                            uris.add(uriMmaster)
+                        }
+                        if (!viewModel.patchFileMaster.isEmpty()) {
+                            var uriSlave = Uri.fromFile(File(viewModel.patchFileSlave))
+                            uris.add(uriSlave)
+                        }
+                        shareIntent.putParcelableArrayListExtra(Intent.EXTRA_STREAM, uris)
+
+                        startActivity(Intent.createChooser(shareIntent, "Выберите приложение для отправки"))
+                    }
+                },
+                negativeButton = "Сохраненные ранее",
+                negativeFun = {
+//                val intent = Intent(Intent.ACTION_PICK)
+//                val uri = Uri.parse(Environment.getExternalStorageDirectory().path + "/${Constants.NAME_DIRECTORY}/")
+//                intent.setDataAndType(uri, "*/*")
+//                startActivityForResult(
+//                    Intent.createChooser(intent, "Выберете приложение для поиска файла"),
+//                    REQUEST_CODE_SELECTION_FILE_TO_SEND
+//                )
+                    // проверяем доступность SD
+                    if (Environment.getExternalStorageState() != Environment.MEDIA_MOUNTED) {
+                        Toast.makeText(this, "SD-карта не доступна", Toast.LENGTH_SHORT).show()
+                        return@setDataDialog
+                    }
+
+                    val intent = Intent(Intent.ACTION_GET_CONTENT)
+                    intent.setType("*/*")
+                    startActivityForResult(intent, REQUEST_CODE_SELECTION_FILE_TO_SEND)
+                }
+            )
+            ConfirmationDialogFragment().show(supportFragmentManager, ConfirmationDialogFragment.TAG)
+        }
 
     }
+
+    //чтение файла ЗС из памяти
+    private fun downloadFileFromMemory() {
+        // проверяем доступность SD
+        if (Environment.getExternalStorageState() != Environment.MEDIA_MOUNTED) {
+            Toast.makeText(this, "SD-карта не доступна", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        val intent = Intent(Intent.ACTION_GET_CONTENT)
+        intent.type = "*/*"
+        //если есть считанные и не сохраненные данные, показать диалог о необходимости сохранения
+        if (viewModel.flagSaveNeed) {
+            viewModel.setDataDialog(
+                title = "ЗС считано но данные не сохранены",
+                message = "Сохранить?",
+                negativeButton = "Нет",
+                negativeFun = {
+                    viewModel.flagSaveNeed = false
+                    startActivityForResult(intent, REQUEST_CODE_SELECTION_FILE_TO_READ)
+                },
+                positiveButton = "Да",
+                positiveFun = {
+                    viewModel.viewModelScope.launch(Dispatchers.IO) {
+                        viewModel.saveDataToFiles()
+                        startActivityForResult(intent, REQUEST_CODE_SELECTION_FILE_TO_READ)
+                    }
+                }
+            )
+            viewModel.flagCreateDialog.value = true
+        } else {
+            startActivityForResult(intent, REQUEST_CODE_SELECTION_FILE_TO_READ)
+        }
+    }
+
 
 }

@@ -21,6 +21,7 @@ import kotlinx.android.synthetic.main.activity_main.*
 
 class ExtendedDataActivity : AppCompatActivity() {
     private var deviceName = ""
+    private var manufacturersNumber = ""
     private var processorId = ""
     private var programVersion = ""
     private var programVersionBuild = ""
@@ -90,7 +91,8 @@ class ExtendedDataActivity : AppCompatActivity() {
 
     //декодер CAN_NEW
     private fun decoderCanNew(data: List<String>): String {
-        deviceName = getStringDeviceNameCanNew(data)
+        deviceName = getStringDeviceNameCanNew(applicationContext, data)
+        manufacturersNumber = getManufacturersNumberCanNew(applicationContext, deviceName, data)
         processorId = getStringProcessorIdCanNew(data)
         programVersion = getStringProgramVersionCanNew(data)
         programDateRelease = getStringProgramDateReleaseCanNew(data)
@@ -138,6 +140,11 @@ class ExtendedDataActivity : AppCompatActivity() {
             result = "$result${String.format("%-18s", begin)}$deviceName\n"
         }
 
+        if (manufacturersNumber.isNotEmpty()) {
+            val begin = "Заводской номер:"
+            result = "$result${String.format("%-18s", begin)}$manufacturersNumber\n"
+        }
+
         if (processorId.isNotEmpty()) {
             val begin = "ID процессора:"
             result = "$result${String.format("%-18s", begin)}$processorId\n\n"
@@ -182,7 +189,7 @@ class ExtendedDataActivity : AppCompatActivity() {
             result = "$result${String.format("%-18s", begin)}$defectFileName\n"
         }
 
-        if (defectStringNumber.isNotEmpty()) {
+        if (defectStringNumber.isNotEmpty() && defectFileName.isNotEmpty()) {
             val begin = "Номер строки:"
             result = "$result${String.format("%-18s", begin)}$defectStringNumber\n"
         }

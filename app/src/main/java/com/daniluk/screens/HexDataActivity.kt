@@ -2,16 +2,12 @@ package com.daniluk.screens
 
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
-import com.daniluk.MainViewModel
 import com.daniluk.R
 import com.daniluk.eePromMaster
 import com.daniluk.eePromSlave
 import com.daniluk.utils.Constants
 import com.daniluk.utils.Constants.CAN_NEW
-import com.daniluk.utils.Constants.TAG_CAN_NEW
-import com.daniluk.utils.byteToStrHex
 import com.daniluk.utils.wordToStrHex
-import kotlinx.android.synthetic.main.activity_extended_data.*
 import kotlinx.android.synthetic.main.activity_hex_data.*
 
 class HexDataActivity : AppCompatActivity() {

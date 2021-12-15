@@ -6,11 +6,11 @@ import android.content.ContentResolver
 import android.content.Context
 import android.content.pm.PackageManager
 import android.net.Uri
-import android.os.Build
 import android.os.Environment
 import android.widget.Toast
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import com.daniluk.decoders.getManufacturersNumberCanNew
 import com.daniluk.decoders.getStringDeviceNameCanNew
 import com.daniluk.decoders.getStringDeviceNameCanOld
 import com.daniluk.utils.Constants.CAN_NEW
@@ -20,15 +20,14 @@ import com.daniluk.utils.Constants.MASTER
 import com.daniluk.utils.Constants.NAME_FILE_MASTER_HEX
 import com.daniluk.utils.Constants.NAME_FILE_SLAVE_HEX
 import com.daniluk.utils.Constants.PP3S
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import java.io.*
 import java.text.SimpleDateFormat
 import java.util.*
 
 const val PERMISSION_REQUEST_CODE_WRITE_READ_EXTERNAL_STORAGE = 301
 const val PERMISSION_REQUEST_CODE_READ_EXTERNAL_STORAGE = 302
-const val REQUEST_CODE_SELECTION_FILE = 303
+const val REQUEST_CODE_SELECTION_FILE_TO_READ = 303
+const val REQUEST_CODE_SELECTION_FILE_TO_SEND = 304
 var uri: Uri? = null
 
 
@@ -38,101 +37,107 @@ var uri: Uri? = null
 suspend fun saveFile(
     data: List<String>,
     idProcessor: Int,
-    nameDirectory: String,
+//    nameDirectory: String,
     context: Context
-): Boolean {
-    var result = false
+): String {
+    var patch = ""
 //    withContext(Dispatchers.IO) {
-        if (data.isEmpty()) {
+    if (data.isEmpty()) {
 //            return@withContext
-            return result
-        }
-        var nameFile: String
+        return patch
+    }
+    var nameFile: String
+    var nameController =
         if (idProcessor == MASTER) {
-            nameFile = NAME_FILE_MASTER_HEX
+            NAME_FILE_MASTER_HEX
         } else {
-            nameFile = NAME_FILE_SLAVE_HEX
+            NAME_FILE_SLAVE_HEX
         }
 
-        // проверяем доступность SD
-        if (Environment.getExternalStorageState() != Environment.MEDIA_MOUNTED) {
-            Toast.makeText(context, "SD-карта не доступна", Toast.LENGTH_SHORT).show()
+    // проверяем доступность SD
+    if (Environment.getExternalStorageState() != Environment.MEDIA_MOUNTED) {
+        Toast.makeText(context, "SD-карта не доступна", Toast.LENGTH_SHORT).show()
 //            return@withContext
-            return result
+        return patch
+    }
+    //получить имя устройства
+    var deviceName = ""
+    when (data.lastOrNull()) {
+        CAN_NEW -> {
+            deviceName = getStringDeviceNameCanNew(context, data)
         }
-        //получить имя устройства
-        var deviceName = ""
-        when (data.lastOrNull()) {
-            CAN_NEW -> {
-                deviceName = getStringDeviceNameCanNew(data)
-            }
-            CAN_OLD -> {
-                deviceName = getStringDeviceNameCanOld(context, data, idProcessor)
-            }
-            PP3S -> {
-            }
-            GP3S -> {
-            }
-            else -> {
+        CAN_OLD -> {
+            deviceName = getStringDeviceNameCanOld(context, data, idProcessor)
+        }
+        PP3S -> {
+        }
+        GP3S -> {
+        }
+        else -> {
 //                return@withContext
-                return result
-            }
+            return patch
         }
-        deviceName += "_"
+    }
+    //deviceName += "_"
 
 
-        // получаем путь к SD
-        var sdPath = Environment.getExternalStorageDirectory()
+    // получаем путь к SD
+    var sdPath = Environment.getExternalStorageDirectory()
 
 
-        // добавляем свой каталог к пути
-        sdPath = File(sdPath.absolutePath + "/" + nameDirectory)
-        // создаем каталог
-        if (!sdPath.isDirectory) {
-            sdPath.mkdirs()
-        }
+    // добавляем свой каталог к пути
+    sdPath = File(sdPath.absolutePath + "/" + Constants.NAME_DIRECTORY)
+    // создаем каталог
+    if (!sdPath.isDirectory) {
+        sdPath.mkdirs()
+    }
 
-        // получаем строку пути
-        val path = sdPath.absolutePath
+    // получаем строку пути
+    val path = sdPath.absolutePath
 
-        // получаем дату и время и добавляем к названию файла
-        val calendar = Calendar.getInstance()
-        val day = SimpleDateFormat("dd", Locale.getDefault()).format(calendar.time)
-        val month = SimpleDateFormat("MM", Locale.getDefault()).format(calendar.time)
-        val year = SimpleDateFormat("yy", Locale.getDefault()).format(calendar.time)
-        val hours = SimpleDateFormat("HH", Locale.getDefault()).format(calendar.time)
-        val minutes = SimpleDateFormat("mm", Locale.getDefault()).format(calendar.time)
-        nameFile += "_" + day + month + year + "_" + hours + minutes
+    //получить заводской номер
+    val number = getManufacturersNumberCanNew(context, deviceName, data)
+    // получаем дату и время и добавляем к названию файла
+    val calendar = Calendar.getInstance()
+    val day = SimpleDateFormat("dd", Locale.getDefault()).format(calendar.time)
+    val month = SimpleDateFormat("MM", Locale.getDefault()).format(calendar.time)
+    val year = SimpleDateFormat("yy", Locale.getDefault()).format(calendar.time)
+    val hours = SimpleDateFormat("HH", Locale.getDefault()).format(calendar.time)
+    val minutes = SimpleDateFormat("mm", Locale.getDefault()).format(calendar.time)
+    nameFile = deviceName + "_" + number + "_" + day + month + year + "_" + hours + minutes + "_" + nameController
 
-        // получаем полный путь к файлу (добавляем директорию и имя файла)
-        nameFile = "$path/$deviceName$nameFile.hex"
-        //преобразовать строки в байты
-        val typeDevice = data.last()
-        data.toMutableList().remove(data.last())
-        val dataByte = mutableListOf<Byte>()
-        for (i in 0 until data.size - 1) {
-            dataByte.add(data[i].toInt(16).toByte())
-        }
+    //добавляем зав номер к имени
+    deviceName += "_" + number
+
+    // получаем полный путь к файлу (добавляем директорию и имя файла)
+    nameFile = "$path/$nameFile.hex"
+    //преобразовать строки в байты
+    val typeDevice = data.last()    //тип устройства (CAN_NEW, CAN_OLD, PP3S, GP3S)
+    data.toMutableList().remove(data.last())
+    val dataByte = mutableListOf<Byte>()
+    for (i in 0 until data.size - 1) {
+        dataByte.add(data[i].toInt(16).toByte())
+    }
     typeDevice.forEach {
         dataByte.add(it.toByte())
     }
-        try {
-            val fileOutputStream = FileOutputStream(nameFile)
-            fileOutputStream.write(dataByte.toByteArray())
-            fileOutputStream.close()
-        } catch (e: FileNotFoundException) {
-            e.printStackTrace()
+    try {
+        val fileOutputStream = FileOutputStream(nameFile)
+        fileOutputStream.write(dataByte.toByteArray())
+        fileOutputStream.close()
+    } catch (e: FileNotFoundException) {
+        e.printStackTrace()
 //            return@withContext
-            return result
-        } catch (e: IOException) {
-            e.printStackTrace()
-            //return@withContext
-            return result
-        }
-        result = true
+        return patch
+    } catch (e: IOException) {
+        e.printStackTrace()
+        //return@withContext
+        return patch
+    }
+    patch = nameFile
 //    }
 
-    return result
+    return patch
 }
 
 /**
